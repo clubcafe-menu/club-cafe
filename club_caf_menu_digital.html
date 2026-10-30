@@ -1,0 +1,2969 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">Club Café - Menu & Pro Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        const CLUB_CAFE_COLORS = {
+            burgundy: {
+                50: '#fdf2f4',
+                100: '#fbe5e8',
+                500: '#8c1c2b',
+                700: '#5a0f1b',
+                800: '#4a0e17',
+                900: '#33080e',
+            },
+            cream: {
+                50: '#fffdfa',
+                100: '#fceee3',
+                200: '#f8dcc8',
+            },
+            amber: {
+                400: '#fbbf24',
+                500: '#f59e0b',
+            }
+        };
+
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: CLUB_CAFE_COLORS,
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+    /* كلاس عزل العناصر لتسريع الأداء ومنع الـ Reflow */
+    .optimized-container {
+        contain: layout style paint;
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar, div::-webkit-scrollbar { display: none; }
+    html, body, div { -ms-overflow-style: none; scrollbar-width: none; }
+    /* ... بقية الـ styles ... */
+</style>
+</head>
+<body class="bg-cream-100 text-slate-800 font-sans min-h-full flex flex-col antialiased pb-24 no-scrollbar" id="bodyRoot">
+
+    <!-- Toast Notification Popup -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-50 bg-burgundy-900 text-amber-300 px-5 py-3 rounded-2xl shadow-2xl border border-amber-400/40 text-xs font-bold transform translate-y-24 opacity-0 transition-all duration-300 flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-base text-emerald-400"></i>
+        <span id="toastMessage">Enregistré avec succès</span>
+    </div>
+
+    <!-- Flash Promo Client Banner (Dynamic) -->
+    <div id="flashPromoClientBanner" class="bg-gradient-to-r from-amber-500 to-red-600 text-white text-center py-2.5 px-4 text-xs font-extrabold hidden flex items-center justify-center gap-2 sticky top-0 z-50 shadow-lg animate-pulse">
+        <i class="fa-solid fa-bolt text-amber-200"></i>
+        <span id="flashPromoText">⚡ عرض خاص لك! خصم 10% على سلتك الحالية لفترة محدودة! / Offre Spéciale -10% !</span>
+        <button onclick="applyFlashPromo()" class="ml-3 px-3 py-1 bg-white text-burgundy-900 rounded-lg text-[11px] font-black shadow hover:bg-amber-100 transition">تطبيق الخصم</button>
+    </div>
+
+    <!-- Low Stock Alert Banner -->
+    <div id="lowStockBanner" class="bg-amber-600 text-white text-center py-2 px-4 text-xs font-bold hidden flex items-center justify-center gap-2 sticky top-0 z-50">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="lowStockText">⚠️ Alerte Stock : certains produits ou offres sont bientôt épuisés !</span>
+    </div>
+
+    <!-- Rush Hour Banner Notice -->
+    <div id="rushBanner" class="bg-red-600 text-white text-center py-2 px-4 text-xs font-bold hidden flex items-center justify-center gap-2 sticky top-0 z-50">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="rushBannerText">⚠️ Attention : Le café est en heure de pointe actuellement. Commandes en ligne suspendues temporairement.</span>
+    </div>
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 bg-burgundy-800 text-cream-100 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-burgundy-500 flex items-center justify-center text-cream-100 shadow-lg flex-shrink-0">
+                    <i class="fa-solid fa-mug-hot text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-extrabold tracking-wide text-cream-100 leading-tight">CLUB CAFÉ</h1>
+                    <p class="text-[11px] sm:text-xs text-cream-200 opacity-85">Menu Interactif & Dashboard</p>
+                </div>
+            </div>
+
+            <div class="flex-1 max-w-md hidden md:block">
+                <div class="relative">
+                    <input type="text" id="searchInput" oninput="debouncedFilterMenu(this.value)" placeholder="Rechercher un produit ou une offre..." 
+                           class="w-full pl-10 pr-4 py-2 rounded-full bg-burgundy-900/60 text-cream-100 placeholder-cream-200/60 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm border border-burgundy-700 transition duration-200">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-2.5 text-cream-200/60 text-sm"></i>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="openAdminModal()" id="dashboardMainBtn" class="relative px-3 sm:px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-400 text-burgundy-900 text-xs font-extrabold transition-all duration-200 hover:scale-105 flex items-center gap-1.5 shadow">
+                    <i class="fa-solid fa-gauge"></i>
+                    <span class="hidden sm:inline">Dashboard</span>
+                    <span id="orderNotificationBadge" class="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden animate-bounce">!</span>
+                </button>
+
+                <button onclick="openFavoritesModal()" class="relative p-2.5 bg-burgundy-700 hover:bg-burgundy-500 text-red-400 rounded-full font-bold shadow transition-all duration-200 hover:scale-105 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 border border-burgundy-500">
+                    <i class="fa-solid fa-heart text-sm sm:text-base"></i>
+                    <span id="favBadge" class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center font-extrabold border-2 border-burgundy-800 hidden">0</span>
+                </button>
+
+                <button onclick="openCartModal()" class="relative p-2.5 bg-burgundy-700 hover:bg-burgundy-500 text-amber-300 rounded-full font-bold shadow transition-all duration-200 hover:scale-105 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 border border-burgundy-500">
+                    <i class="fa-solid fa-basket-shopping text-sm sm:text-base"></i>
+                    <span id="cartBadge" class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center font-extrabold border-2 border-burgundy-800 hidden">0</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="px-4 pb-3 md:hidden">
+            <div class="relative">
+                <input type="text" id="searchInputMobile" oninput="debouncedFilterMenu(this.value)" placeholder="Rechercher..." 
+                       class="w-full pl-10 pr-4 py-2 rounded-full bg-burgundy-900/60 text-cream-100 placeholder-cream-200/60 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm border border-burgundy-700 transition duration-200">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-2.5 text-cream-200/60 text-sm"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="max-w-7xl mx-auto px-4 py-6 w-full space-y-6 flex-grow">
+
+        <div id="clientActiveOrderBanner" class="hidden sticky top-[115px] sm:top-[76px] z-30 transition-all duration-300">
+            <div class="bg-burgundy-900 text-cream-100 p-4 sm:p-5 rounded-2xl shadow-2xl border border-amber-400/40 space-y-3 relative">
+                <button onclick="dismissClientTracker()" class="absolute right-4 top-4 text-cream-200 hover:text-white p-1.5 rounded-full bg-burgundy-800 transition hover:scale-110 shadow" title="Fermer le suivi">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+                <div class="flex items-center justify-between border-b border-burgundy-700 pb-2 pr-10">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-receipt text-amber-400 text-lg"></i>
+                        <h3 class="font-extrabold text-sm sm:text-base">Suivi de votre commande <span id="bannerOrderId" class="text-amber-300">#----</span></h3>
+                    </div>
+                    <span id="bannerStatusBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-burgundy-900">En attente 🟡</span>
+                </div>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs pt-1">
+                    <div>
+                        <p class="text-cream-200">Client : <strong id="bannerClientName" class="text-white">---</strong></p>
+                        <p class="text-cream-200 mt-0.5">Total à régler : <strong id="bannerOrderTotal" class="text-amber-300">0.00 €</strong> (Au comptoir)</p>
+                    </div>
+                    <div id="bannerStatusText" class="font-bold text-amber-300 bg-burgundy-800 px-3 py-2 rounded-xl border border-burgundy-700 shadow-inner">
+                        ⏳ Veuillez vous présenter au comptoir pour régler votre commande.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-start">
+            <button onclick="openClientAllergensModal()" class="px-4 py-2 rounded-full bg-burgundy-900 text-white font-bold text-xs shadow-md flex items-center gap-2 border border-white/20 active:scale-95 transition-transform duration-150">
+                <span class="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-white">
+                    <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+                </span>
+                <span>Allergènes & Ingrédients</span>
+                <i class="fa-solid fa-chevron-right text-[9px] text-white/60"></i>
+            </button>
+        </div>
+
+        <section class="space-y-2">
+            <div id="dietaryFiltersBar" class="flex gap-2 overflow-x-auto no-scrollbar py-1 cursor-grab active:cursor-grabbing"></div>
+            <div id="subDietaryFiltersBar" class="flex gap-2 overflow-x-auto no-scrollbar py-1.5 px-2 bg-amber-50/70 border border-amber-200/60 rounded-xl hidden transition-all duration-300 cursor-grab active:cursor-grabbing"></div>
+        </section>
+
+        <section>
+            <div id="quickCategoryPills" class="flex gap-2 overflow-x-auto no-scrollbar py-1 border-t border-amber-200/40 pt-3 cursor-grab active:cursor-grabbing"></div>
+        </section>
+
+        <!-- OFFRES DU JOUR -->
+        <section id="formulesSection" class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 rounded-lg bg-red-500 text-white shadow-md">
+                        <i class="fa-solid fa-fire text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-bold text-burgundy-900 leading-tight">Offres du Jour</h2>
+                        <p class="text-xs text-slate-500">Nos meilleures affaires du moment à ne pas manquer !</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="formulesGridContainer" class="flex gap-4 overflow-x-auto no-scrollbar pb-2 cursor-grab active:cursor-grabbing"></div>
+        </section>
+
+        <!-- CATEGORIES GRID -->
+        <section class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 rounded-lg bg-burgundy-800 text-amber-300 shadow-md">
+                        <i class="fa-solid fa-layer-group text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-bold text-burgundy-900 leading-tight">Catégories</h2>
+                        <p class="text-xs text-slate-500">Choisissez une catégorie pour voir les produits</p>
+                    </div>
+                </div>
+            </div>
+            <div id="categoriesGridContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+        </section>
+    </main>
+
+    <!-- Modal des allergènes -->
+    <div id="clientAllergensModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+        <div id="clientAllergensModalContent" class="w-full max-w-2xl bg-burgundy-900 text-cream-100 rounded-2xl shadow-2xl overflow-hidden flex flex-col p-6 space-y-4 transform scale-95 transition-transform duration-300 ease-out border border-amber-400/30">
+            <div class="flex items-center justify-between border-b border-burgundy-700 pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells text-amber-400 text-lg"></i>
+                    <h3 class="font-black text-base text-amber-300">Matrice des Allergènes & Ingrédients</h3>
+                </div>
+                <button onclick="closeClientAllergensModal()" class="text-cream-200 hover:text-white p-1.5 rounded-full bg-burgundy-800 transition hover:scale-110">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-3 text-xs sm:text-sm leading-relaxed text-cream-200">
+                <p>نحرص في <strong class="text-white">Club Café</strong> على توضيح مسببات الحساسية والمكونات لكل صنف بدقة عبر المصفوفة التالية:</p>
+                <p class="text-xs italic text-cream-200/80">Nous veillons à clarifier les allergènes et ingrédients de chaque article grâce à la matrice suivante :</p>
+                
+                <div class="overflow-x-auto rounded-xl border-2 border-burgundy-800 shadow-inner max-h-80 no-scrollbar">
+                    <table class="w-full text-center text-xs sm:text-sm bg-cream-50 text-burgundy-900 border-collapse">
+                        <thead id="clientMatrixHead"></thead>
+                        <tbody id="clientMatrixBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="text-[11px] text-amber-300/95 bg-burgundy-800/80 p-3 rounded-xl border border-burgundy-700 flex items-center justify-between">
+                    <span>🔴 النقاط تمثل مستويات التواجد في المكونات. / Les points représentent les niveaux de présence.</span>
+                    <span class="font-bold">Club Café 2026 ©</span>
+                </div>
+            </div>
+            
+            <div class="pt-2 flex justify-end">
+                <button onclick="closeClientAllergensModal()" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-burgundy-900 font-bold text-xs rounded-xl shadow transition">
+                    فهمت ذلك (Compris)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CATEGORY BOTTOM SHEET MODAL -->
+    <div id="categoryDetailModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300 flex items-end justify-center">
+        <div id="bottomSheet" class="w-full max-w-4xl h-[85vh] bg-burgundy-900 text-cream-100 rounded-t-3xl shadow-2xl overflow-hidden flex flex-col transform translate-y-full transition-transform duration-300 ease-out no-scrollbar">
+            <div class="w-full flex justify-center pt-3 pb-2 bg-burgundy-900 flex-shrink-0 cursor-grab active:cursor-grabbing">
+                <div class="w-14 h-1.5 bg-burgundy-700 rounded-full"></div>
+            </div>
+            <div class="px-4 pb-6 pt-2 flex flex-col items-center justify-center bg-burgundy-900 border-b border-burgundy-700 text-center relative flex-shrink-0">
+                <button onclick="closeCategoryModal()" class="absolute right-4 top-4 text-cream-200 hover:text-white p-2 rounded-full bg-burgundy-800 transition hover:scale-110 pointer-events-auto">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+                <div id="modalCatImgContainer" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-slate-800 border-4 border-amber-400 overflow-hidden shadow-xl mb-3 flex items-center justify-center">
+                    <img id="modalCatImg" src="" loading="lazy" class="w-full h-full object-cover">
+                </div>
+                <h3 id="modalCatTitle" class="text-xl sm:text-2xl font-black tracking-wide text-amber-300">Nom de Catégorie</h3>
+                <p class="text-xs text-cream-200/80 mt-1">Produits disponibles dans cette catégorie</p>
+            </div>
+            <div id="modalCatItemsList" class="p-4 sm:p-6 overflow-y-auto space-y-4 bg-cream-50 text-slate-800 flex-grow pointer-events-auto"></div>
+        </div>
+    </div>
+
+    <!-- ITEM CUSTOMIZATION & OPTIONS -->
+    <div id="customizationModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+        <div id="customizationModalContent" class="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col transform scale-95 transition-transform duration-300 ease-out max-h-[90vh]">
+            <div class="p-4 bg-burgundy-800 text-cream-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-burger text-amber-400"></i>
+                    <h3 class="font-bold text-base">Personnalisation du produit</h3>
+                </div>
+                <button onclick="closeCustomizationModal()" class="text-cream-200 hover:text-white transition hover:scale-110">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-4 sm:p-6 space-y-5 overflow-y-auto max-h-[70vh] no-scrollbar">
+                <div class="flex items-center justify-between border-b pb-4">
+                    <div class="flex items-center gap-4">
+                        <img id="custModalImg" src="" loading="lazy" class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shadow">
+                        <div>
+                            <h4 id="custItemName" class="font-extrabold text-slate-800 text-base sm:text-lg">Nom du produit</h4>
+                            <p id="custItemBasePrice" class="text-burgundy-800 font-black text-sm sm:text-base mt-1">0.00 €</p>
+                        </div>
+                    </div>
+                    <button id="custFavBtn" onclick="toggleFavoriteCurrent()" class="p-3 rounded-full bg-slate-100 text-slate-400 hover:text-red-600 transition shadow">
+                        <i class="fa-solid fa-heart text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="font-bold text-xs text-slate-700 block">🌡️ Température :</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center justify-center p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-xs font-bold transition">
+                            <input type="radio" name="temp" value="Chaud" checked class="mr-2"> Chaud
+                        </label>
+                        <label class="flex items-center justify-center p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-xs font-bold transition">
+                            <input type="radio" name="temp" value="Glacé" class="mr-2"> Glacé
+                        </label>
+                    </div>
+                </div>
+
+                <div id="nestedDietaryOptionsSection" class="space-y-2 hidden">
+                    <label id="nestedDietaryLabel" class="font-bold text-xs text-burgundy-900 block border-b pb-1">🥛 Choix :</label>
+                    <div id="nestedDietaryOptionsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="font-bold text-xs text-slate-700 block">📏 Taille :</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-xs font-bold transition">
+                            <span><input type="radio" name="size" value="Petit" data-price="0.00" checked class="mr-1"> Petit</span>
+                            <span class="text-[10px] text-slate-400">Standard</span>
+                        </label>
+                        <label class="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-xs font-bold transition">
+                            <span><input type="radio" name="size" value="Moyen" data-price="0.50" class="mr-1"> Moyen</span>
+                            <span class="text-[10px] text-burgundy-800">+0.50 €</span>
+                        </label>
+                        <label class="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-xs font-bold transition">
+                            <span><input type="radio" name="size" value="Grand" data-price="1.00" class="mr-1"> Grand</span>
+                            <span class="text-[10px] text-burgundy-800">+1.00 €</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <h5 class="font-bold text-xs text-slate-500 uppercase tracking-wider">Suppléments optionnels</h5>
+                    <div id="dynamicAddonsContainer" class="space-y-2"></div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="font-bold text-xs text-slate-700 block">📝 Instructions spéciales :</label>
+                    <textarea id="customerItemNote" placeholder="Ex: Sans oignon, sauce extra..." class="w-full p-3 text-xs border rounded-xl focus:ring-2 focus:ring-burgundy-500 outline-none transition duration-200"></textarea>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t flex items-center justify-between">
+                <div>
+                    <span class="text-xs text-slate-500 font-bold">Total final :</span>
+                    <div id="custFinalPrice" class="text-lg sm:text-xl font-black text-burgundy-900">0.00 €</div>
+                </div>
+                <button onclick="confirmAddToCartCustomized()" class="px-5 sm:px-6 py-3 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 rounded-xl font-bold text-xs shadow transition-all duration-200 hover:scale-105">
+                    Ajouter au panier
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CART MODAL -->
+    <div id="cartModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300 flex justify-end">
+        <div id="cartModalContent" class="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between transform translate-x-full transition-transform duration-300 ease-out">
+            <div class="p-4 bg-burgundy-800 text-cream-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-basket-shopping text-amber-400"></i>
+                    <h3 class="font-bold text-lg">Mon Panier</h3>
+                </div>
+                <button onclick="closeCartModal()" class="text-cream-200 hover:text-white p-1 transition hover:scale-110">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-grow space-y-4 no-scrollbar" id="cartItemsContainer">
+                <div class="text-center text-slate-400 py-10">
+                    <i class="fa-solid fa-basket-shopping text-4xl mb-2 opacity-30"></i>
+                    <p>Votre panier est vide</p>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
+                <form id="checkoutForm" onsubmit="submitOrderInternal(event)" class="space-y-3">
+                    <div class="flex flex-col gap-1 bg-white p-2.5 rounded-xl border border-slate-300 shadow-sm">
+                        <label class="text-[11px] font-extrabold text-burgundy-900">👤 Nom du Client *</label>
+                        <input type="text" id="clientNameInput" placeholder="Entrez votre nom..." required class="w-full text-xs font-bold outline-none bg-transparent">
+                    </div>
+                    <div class="flex justify-between text-burgundy-900 font-black text-lg pt-1">
+                        <span>Total :</span>
+                        <span id="cartTotal">0.00 €</span>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 rounded-xl font-bold shadow transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane text-base"></i> <span>Commander (Payer au comptoir)</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAVORITES MODAL -->
+    <div id="favoritesModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300 flex justify-end">
+        <div id="favoritesModalContent" class="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between transform translate-x-full transition-transform duration-300 ease-out">
+            <div class="p-4 bg-burgundy-800 text-cream-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-heart text-red-400"></i>
+                    <h3 class="font-bold text-lg">Mes Favoris</h3>
+                </div>
+                <button onclick="closeFavoritesModal()" class="text-cream-200 hover:text-white p-1 transition hover:scale-110">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-grow space-y-4 no-scrollbar" id="favoritesItemsContainer">
+                <div class="text-center text-slate-400 py-10">
+                    <i class="fa-solid fa-heart text-4xl mb-2 opacity-30"></i>
+                    <p>Aucun favori pour le moment</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN LOGIN MODAL -->
+    <div id="adminLoginModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+        <div id="adminLoginModalContent" class="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col p-6 space-y-4 transform scale-95 transition-transform duration-300 ease-out">
+            <div class="flex items-center justify-between border-b pb-2">
+                <h3 class="font-bold text-base text-burgundy-900">🔐 Connexion Dashboard</h3>
+                <button onclick="closeAdminLoginModal()" class="text-slate-400 hover:text-slate-600 transition hover:scale-110">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="verifyAdminPassword(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Mot de passe :</label>
+                    <input type="password" id="adminPasswordInput" placeholder="Entrez le mot de passe..." required class="w-full px-3 py-2 text-xs border rounded-lg outline-none focus:ring-2 focus:ring-burgundy-500 transition">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 font-bold text-xs rounded-lg shadow transition-all duration-200 hover:scale-105">
+                    Se connecter
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ADMIN SETTINGS / PASSWORD MODAL -->
+    <div id="adminSettingsModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[999] hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+        <div id="adminSettingsModalContent" class="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col p-6 space-y-4 transform scale-95 transition-transform duration-300 ease-out">
+            <div class="flex items-center justify-between border-b pb-2">
+                <h3 class="font-bold text-base text-burgundy-900">⚙️ Changer le mot de passe</h3>
+                <button onclick="closeAdminSettingsModal()" class="text-slate-400 hover:text-slate-600 transition hover:scale-110">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="updateAdminPassword(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Code Secret Master (Requis) :</label>
+                    <input type="password" id="masterKeyInput" placeholder="Entrez le code secret..." required class="w-full px-3 py-2 text-xs border rounded-lg outline-none focus:ring-2 focus:ring-burgundy-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Nouveau mot de passe :</label>
+                    <input type="password" id="newAdminPasswordInput" placeholder="Entrer le nouveau mot de passe..." required class="w-full px-3 py-2 text-xs border rounded-lg outline-none focus:ring-2 focus:ring-burgundy-500 transition">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 font-bold text-xs rounded-lg shadow transition-all duration-200 hover:scale-105">
+                    Enregistrer le mot de passe
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- PRO DASHBOARD MODAL -->
+    <div id="adminModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+        <div id="adminModalContent" class="w-[95%] sm:w-[90%] md:w-[1024px] h-[85vh] max-h-[800px] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col transform scale-95 transition-transform duration-300 ease-out">
+            <div class="p-3 sm:p-4 bg-burgundy-900 text-cream-100 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-gauge-high text-amber-400"></i>
+                    <h3 class="font-bold text-base sm:text-lg">Tableau de Bord Pro</h3>
+                </div>
+                <div class="flex items-center flex-wrap gap-2">
+                    <button onclick="toggleRushHour()" id="rushHourToggleBtn" class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-emerald-600 text-white shadow transition hover:scale-105">
+                        🟢 Café : Ouvert
+                    </button>
+                    <button id="masterSettingsBtn" onclick="openAdminSettingsModal()" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-700 text-cream-100 shadow transition hidden items-center gap-1.5 hover:scale-105">
+                        <i class="fa-solid fa-key"></i> Paramètres
+                    </button>
+                    <button onclick="exportDatabaseJSON()" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-600 text-white shadow transition flex items-center gap-1.5 hover:scale-105" title="تصدير نسخة احتياطية">
+                        <i class="fa-solid fa-download"></i> <span>Export JSON</span>
+                    </button>
+                    <label class="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow transition flex items-center gap-1.5 hover:scale-105 cursor-pointer" title="استيراد نسخة احتياطية">
+                        <i class="fa-solid fa-upload"></i> <span>Import JSON</span>
+                        <input type="file" accept=".json" onchange="importDatabaseJSON(event)" class="hidden">
+                    </label>
+                    <button onclick="exportCSVReport()" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 text-burgundy-900 shadow transition flex items-center gap-1.5 hover:scale-105">
+                        <i class="fa-solid fa-file-excel"></i> <span class="hidden sm:inline">Excel</span>
+                    </button>
+                    <button onclick="logoutAdmin()" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-red-600 text-white shadow transition flex items-center gap-1.5 hover:scale-105">
+                        <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Quitter</span>
+                    </button>
+                    <button onclick="closeAdminModal()" class="text-cream-200 hover:text-white p-1 transition hover:scale-110">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Stats Bar -->
+            <div class="bg-amber-50 px-4 sm:px-6 py-3 border-b flex flex-wrap gap-4 sm:gap-8 text-xs font-bold text-burgundy-900 items-center flex-shrink-0">
+                <span>📊 Statistiques :</span>
+                <span id="statTotalProducts" class="bg-white px-2.5 py-1 rounded-lg shadow-sm">Produits : 0</span>
+                <span id="statTotalCategories" class="bg-white px-2.5 py-1 rounded-lg shadow-sm">Catégories : 0</span>
+                <span id="statTotalOrders" class="bg-white px-2.5 py-1 rounded-lg shadow-sm">Commandes : 0</span>
+                <span id="statActiveCarts" class="bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg shadow-sm">🛒 سلال نشطة : 0</span>
+                <span id="statTotalRevenue" class="bg-white px-2.5 py-1 rounded-lg shadow-sm text-emerald-700">Revenus : 0.00 €</span>
+            </div>
+
+            <!-- Detailed Tabs -->
+            <div id="adminTabsContainer" class="bg-slate-100 px-4 sm:px-6 pt-3 border-b flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar flex-shrink-0 cursor-grab active:cursor-grabbing select-none">
+                <button onclick="switchAdminTab('formules')" id="tabBtnFormules" class="pb-3 px-3 sm:px-4 font-bold text-xs border-b-2 border-burgundy-800 text-burgundy-900 transition flex items-center gap-2 flex-shrink-0">
+                    <i class="fa-solid fa-fire"></i> <span>Offres & Stock</span>
+                </button>
+                <button onclick="switchAdminTab('categories')" id="tabBtnCategories" class="pb-3 px-3 sm:px-4 font-bold text-xs border-b-2 border-transparent text-slate-500 hover:text-burgundy-900 transition flex items-center gap-2 flex-shrink-0">
+                    <i class="fa-solid fa-folder-tree"></i> <span>Catégories & Suppléments</span>
+                </button>
+                <button onclick="switchAdminTab('diets')" id="tabBtnDiets" class="pb-3 px-3 sm:px-4 font-bold text-xs border-b-2 border-transparent text-slate-500 hover:text-burgundy-900 transition flex items-center gap-2 flex-shrink-0">
+                    <i class="fa-solid fa-seedling"></i> <span>Filtres & Options</span>
+                </button>
+                <button onclick="switchAdminTab('allergens')" id="tabBtnAllergens" class="pb-3 px-3 sm:px-4 font-bold text-xs border-b-2 border-transparent text-slate-500 hover:text-burgundy-900 transition flex items-center gap-2 flex-shrink-0">
+                    <i class="fa-solid fa-table-cells"></i> <span>Matrice des Allergènes</span>
+                </button>
+                <button onclick="switchAdminTab('clients')" id="tabBtnClients" class="pb-3 px-3 sm:px-4 font-bold text-xs border-b-2 border-transparent text-slate-500 hover:text-burgundy-900 transition flex items-center gap-2 flex-shrink-0">
+                    <i class="fa-solid fa-users"></i> <span>Clients (Panier & Favoris)</span>
+                </button>
+                <button onclick="switchAdminTab('orders')" id="tabBtnOrders" class="pb-3 px-3 sm:px-4 font-bold text-xs border-b-2 border-transparent text-slate-500 hover:text-burgundy-900 transition flex items-center gap-2 flex-shrink-0">
+                    <i class="fa-solid fa-receipt"></i> <span>Commandes & Impression</span>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 overflow-y-auto space-y-6 flex-grow bg-slate-50 no-scrollbar">
+                
+                <!-- TAB 1: OFFRES -->
+                <div id="adminTabFormules" class="space-y-6">
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
+                            <h4 id="formuleFormTitle" class="font-bold text-burgundy-900 text-sm">
+                                <i class="fa-solid fa-circle-plus text-amber-500"></i> <span>Ajouter ou modifier une Offre</span>
+                            </h4>
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="cancelFormuleEditBtn" onclick="resetFormuleForm()" class="px-3 py-1.5 bg-slate-300 text-slate-700 font-bold text-xs rounded-xl hidden transition">Annuler</button>
+                                <label class="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-extrabold cursor-pointer shadow flex items-center gap-1.5 transition hover:scale-105">
+                                    <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Scan avec l'IA
+                                    <input type="file" accept="image/*" onchange="handleAiScan(event, 'formule')" class="hidden">
+                                </label>
+                            </div>
+                        </div>
+                        <form onsubmit="saveFormule(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <input type="hidden" id="editFormuleId" value="">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Titre de l'Offre:</label>
+                                <input type="text" id="newFormuleTitle" placeholder="Offre Club" class="w-full px-3 py-2 text-xs border rounded-lg transition">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Prix (€):</label>
+                                <input type="number" step="0.01" id="newFormulePrice" placeholder="8.90" class="w-full px-3 py-2 text-xs border rounded-lg transition">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Badge (ex: OFFRE TOP):</label>
+                                <input type="text" id="newFormuleBadge" placeholder="OFFRE TOP" class="w-full px-3 py-2 text-xs border rounded-lg transition">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Stock de l'Offre:</label>
+                                <input type="number" id="newFormuleStock" placeholder="10" class="w-full px-3 py-2 text-xs border rounded-lg transition">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Description:</label>
+                                <input type="text" id="newFormuleDesc" placeholder="1 Sandwich au choix + 1 Pâtisserie..." class="w-full px-3 py-2 text-xs border rounded-lg transition">
+                            </div>
+                            <div class="lg:col-span-3">
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Image URL:</label>
+                                <input type="url" id="newFormuleImg" placeholder="https://..." class="w-full px-3 py-2 text-xs border rounded-lg transition">
+                            </div>
+                            <div class="lg:col-span-3 flex items-center justify-between flex-wrap gap-3">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="newFormuleInfinite" onchange="toggleInfiniteFormuleStockInput(this.checked)" class="w-4 h-4 text-burgundy-800 rounded">
+                                    <span class="text-xs font-bold text-slate-700">♾️ Stock infini</span>
+                                </label>
+                                <button type="submit" class="px-6 py-2.5 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 font-bold text-xs rounded-lg shadow transition hover:scale-105">Enregistrer l'Offre</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-4 bg-slate-100 border-b flex flex-wrap justify-between items-center gap-3">
+                            <span class="font-bold text-xs text-slate-700">Liste des Offres (Modifiable directement) :</span>
+                        </div>
+                        <div class="overflow-x-auto max-h-80 no-scrollbar">
+                            <table class="w-full text-left text-xs min-w-[600px]">
+                                <thead class="bg-slate-50 text-slate-500 border-b sticky top-0">
+                                    <tr>
+                                        <th class="p-3 w-16 text-center">Ordre</th>
+                                        <th class="p-3">Offre</th>
+                                        <th class="p-3 w-28">Prix (€)</th>
+                                        <th class="p-3 w-28">Stock</th>
+                                        <th class="p-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminFormulesTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: CATEGORIES & SUPPLÉMENTS -->
+                <div id="adminTabCategories" class="space-y-6 hidden">
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
+                            <h4 id="categoryFormTitle" class="font-bold text-burgundy-900 text-sm">
+                                <i class="fa-solid fa-circle-plus text-amber-500"></i> <span>Ajouter ou modifier une catégorie</span>
+                            </h4>
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="cancelCatEditBtn" onclick="resetCategoryForm()" class="px-3 py-1.5 bg-slate-300 text-slate-700 font-bold text-xs rounded-xl hidden transition">Annuler</button>
+                                <label class="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-extrabold cursor-pointer shadow flex items-center gap-1.5 transition hover:scale-105">
+                                    <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Scan avec l'IA
+                                    <input type="file" accept="image/*" onchange="handleAiScan(event, 'category')" class="hidden">
+                                </label>
+                            </div>
+                        </div>
+                        <form onsubmit="saveCategory(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <input type="hidden" id="editCatOriginalId" value="">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">ID (Anglais unique):</label>
+                                <input type="text" id="newCatId" placeholder="ex: juices" class="w-full px-3 py-2 text-xs border rounded-lg transition">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Nom:</label>
+                                <input type="text" id="newCatName" placeholder="Jus Frais" class="w-full px-3 py-2 text-xs border rounded-lg transition">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Image URL:</label>
+                                <input type="url" id="newCatImg" placeholder="https://..." class="w-full px-3 py-2 text-xs border rounded-lg transition">
+                            </div>
+                            <div class="sm:col-span-2 flex justify-end">
+                                <button type="submit" class="px-6 py-2.5 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 font-bold text-xs rounded-lg shadow transition hover:scale-105">Enregistrer la Catégorie</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="border-b pb-2">
+                            <h4 id="prodFormTitle" class="font-bold text-burgundy-900 text-sm">
+                                <i class="fa-solid fa-burger text-amber-500"></i> <span>Ajouter un produit dans une catégorie</span>
+                            </h4>
+                        </div>
+                        <form onsubmit="saveProductHierarchical(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <input type="hidden" id="editProdId" value="">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Nom du produit:</label>
+                                <input type="text" id="hierProdName" placeholder="ex: Café Espresso" class="w-full px-3 py-1.5 text-xs border rounded-lg" required>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Prix (€):</label>
+                                <input type="number" step="0.01" id="hierProdPrice" placeholder="2.50" class="w-full px-3 py-1.5 text-xs border rounded-lg" required>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Catégorie cible:</label>
+                                <select id="hierProdCatSelect" class="w-full px-3 py-1.5 text-xs border rounded-lg" required></select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Stock:</label>
+                                <input type="number" id="hierProdStock" placeholder="10" class="w-full px-3 py-1.5 text-xs border rounded-lg" required>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Image URL:</label>
+                                <input type="url" id="hierProdImg" placeholder="https://..." class="w-full px-3 py-1.5 text-xs border rounded-lg">
+                            </div>
+                            <div class="sm:col-span-2 flex items-center gap-4 pt-4">
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-700">
+                                    <input type="checkbox" id="hierProdHasTemp" class="w-4 h-4 text-burgundy-800 rounded"> 🌡️ Température (Chaud/Glacé)
+                                </label>
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-700">
+                                    <input type="checkbox" id="hierProdHasSize" class="w-4 h-4 text-burgundy-800 rounded"> 📏 Tailles (Petit/Moyen/Grand)
+                                </label>
+                            </div>
+                            <div class="sm:col-span-2 lg:col-span-4 flex justify-end">
+                                <button type="submit" class="px-6 py-2 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 font-bold text-xs rounded-lg shadow">Ajouter le Produit</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h4 class="font-bold text-burgundy-900 text-sm">Structure hiérarchique :</h4>
+                        <div id="hierarchicalCategoriesContainer" class="space-y-4"></div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: DIETS -->
+                <div id="adminTabDiets" class="space-y-6 hidden">
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <h4 id="dietFormTitle" class="font-bold text-burgundy-900 text-sm border-b pb-2">Ajouter un filtre principal et ses sous-options</h4>
+                        <form onsubmit="saveDietaryFilterForm(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <input type="hidden" id="editDietId" value="">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">ID (Anglais):</label>
+                                <input type="text" id="newDietId" placeholder="ex: lactose" class="w-full px-3 py-2 text-xs border rounded-lg transition">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Nom (avec Emoji):</label>
+                                <input type="text" id="newDietFr" placeholder="🥛 Sans Lactose" class="w-full px-3 py-2 text-xs border rounded-lg transition">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-[11px] font-bold text-burgundy-900 mb-1">Sous-options (séparées par des virgules):</label>
+                                <input type="text" id="newDietSubOptions" placeholder="Lait d'amande, Lait de soja, Lait d'avoine" class="w-full px-3 py-2 text-xs border border-amber-300 rounded-lg bg-amber-50/40 transition">
+                            </div>
+                            <div class="sm:col-span-2 flex justify-end gap-2 flex-wrap">
+                                <button type="button" id="cancelDietEditBtn" onclick="resetDietForm()" class="px-4 py-2 bg-slate-300 text-slate-700 font-bold text-xs rounded-lg hidden transition">Annuler</button>
+                                <button type="submit" class="px-6 py-2.5 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 font-bold text-xs rounded-lg shadow transition hover:scale-105">Enregistrer le filtre</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h4 class="font-bold text-burgundy-900 text-sm mb-3">Filtres et contrôle des sous-options :</h4>
+                        <div id="adminDietsList" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: DYNAMIC MATRIX ALLERGENS MANAGEMENT -->
+                <div id="adminTabAllergens" class="space-y-6 hidden">
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
+                            <h4 class="font-bold text-burgundy-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-table-cells text-amber-500"></i> <span>Personnalisation de la Matrice (Colonnes & Lignes)</span>
+                            </h4>
+                            <div class="flex gap-2">
+                                <button onclick="matrixAddColumn()" class="px-3 py-1.5 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 rounded-xl text-xs font-bold shadow transition">
+                                    <i class="fa-solid fa-plus"></i> إضافة عمود / Ajouter colonne
+                                </button>
+                                <button onclick="matrixRemoveColumn()" class="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold shadow transition">
+                                    <i class="fa-solid fa-minus"></i> حذف عمود / Supprimer colonne
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h5 class="text-xs font-extrabold text-burgundy-900 uppercase">إضافة سطر جديد (مكون / حساسيات): / Ajouter une ligne :</h5>
+                            </div>
+                            <form onsubmit="matrixSaveRow(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <input type="hidden" id="editMatrixRowIndex" value="-1">
+                                <div class="sm:col-span-2">
+                                    <input type="text" id="newMatrixRowName" placeholder="Ex: Gluten, Lait, Arachides..." class="w-full px-3 py-2 text-xs border rounded-lg" required>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="flex-1 py-2 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 font-bold text-xs rounded-lg shadow transition">
+                                        حفظ السطر / Enregistrer
+                                    </button>
+                                    <button type="button" id="cancelMatrixRowEdit" onclick="resetMatrixRowForm()" class="px-3 py-2 bg-slate-300 text-slate-700 font-bold text-xs rounded-lg hidden">إلغاء</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <h4 class="font-bold text-burgundy-900 text-sm mb-3">إدارة الصفوف وتفعيل النقاط في المربعات : / Gestion des lignes et activation des points :</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs bg-slate-50 border border-slate-200">
+                                <thead id="adminMatrixEditorHead" class="bg-slate-100 text-slate-700"></thead>
+                                <tbody id="adminMatrixEditorBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB NEW: CLIENTS (PANIER & FAVORIS) WITH FLASH PROMO -->
+                <div id="adminTabClients" class="space-y-4 hidden">
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="border-b pb-2 flex items-center justify-between">
+                            <h4 class="font-bold text-burgundy-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-users text-amber-500"></i> <span>Aperçu du Panier & des Favoris des Clients Actuels</span>
+                            </h4>
+                            <div class="flex items-center gap-2">
+                                <button onclick="triggerFlashPromo()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-burgundy-900 rounded-xl text-xs font-extrabold shadow flex items-center gap-1.5">
+                                    <i class="fa-solid fa-bolt"></i> إرسال عرض فلاش (Flash Promo 10%)
+                                </button>
+                                <button onclick="updateClientsTabUI()" class="px-3 py-1.5 bg-burgundy-800 text-amber-300 rounded-xl text-xs font-bold shadow">
+                                    <i class="fa-solid fa-rotate"></i> Actualiser
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Trending / Top 20 Favoris Section -->
+                        <div class="bg-amber-50/70 p-4 rounded-xl border border-amber-200 space-y-2">
+                            <h5 class="font-extrabold text-xs text-burgundy-900 uppercase flex items-center gap-1.5">
+                                <i class="fa-solid fa-fire text-red-600"></i> Produits les plus populaires / الأكثر رغبة في المفضلة (Top 20) :
+                            </h5>
+                            <div id="adminTrendingFavList" class="flex gap-2 overflow-x-auto no-scrollbar py-1 cursor-grab active:cursor-grabbing">
+                                <p class="text-xs text-slate-400 italic">Aucun favori pour le moment.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                                <h5 class="font-extrabold text-xs text-burgundy-900 uppercase">🛒 Panier actuel (Activité du client) :</h5>
+                                <div id="adminClientsCartList" class="space-y-2 text-xs">
+                                    <p class="text-slate-400 italic">Aucun article dans le panier pour l'instant.</p>
+                                </div>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                                <h5 class="font-extrabold text-xs text-burgundy-900 uppercase">❤️ Produits en favoris (Liste complète) :</h5>
+                                <div id="adminClientsFavList" class="space-y-2 text-xs">
+                                    <p class="text-slate-400 italic">Aucun favori enregistré.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: ORDERS -->
+                <div id="adminTabOrders" class="space-y-4 hidden">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex-wrap gap-3">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-xs text-burgundy-900">📦 Filtrer :</span>
+                            <button onclick="setOrderFilter('all')" id="orderFilterAll" class="px-3 py-1 rounded-lg text-xs font-bold bg-burgundy-800 text-amber-300 shadow">Tous</button>
+                            <button onclick="setOrderFilter('En attente de paiement')" id="orderFilterPending" class="px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-700 border">En attente 🟡</button>
+                            <button onclick="setOrderFilter('En préparation')" id="orderFilterPrep" class="px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-700 border">Préparation 🔄</button>
+                            <button onclick="setOrderFilter('Prêt')" id="orderFilterReady" class="px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-700 border">Prêts ☕</button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="clearCompletedOrders()" class="px-3 py-1.5 bg-red-600 text-white rounded-xl text-xs font-bold shadow hover:bg-red-500 transition hover:scale-105 flex items-center gap-1.5">
+                                <i class="fa-solid fa-trash-can"></i> Archiver / Effacer les prêtes
+                            </button>
+                        </div>
+                    </div>
+                    <div id="adminOrdersCardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 optimized-container"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="printReceiptArea" class="hidden"></div>
+
+    <script>
+        let currentDietaryFilter = 'all';
+        let currentSubDietaryFilter = 'all';
+        let adminStockFilter = 'all';
+        let currentOrderFilter = 'all';
+        let isRushHour = false;
+        let isAdminLoggedIn = false;
+        let flashDiscountActive = false;
+
+        let menuMap = new Map();
+        let categoriesMap = new Map();
+
+        // تفعيل السحب بالماوس (Drag to Scroll) لجميع الأشرطة الأفقية
+        document.addEventListener('DOMContentLoaded', () => {
+            const scrollableContainers = document.querySelectorAll('.overflow-x-auto');
+            scrollableContainers.forEach(container => {
+                let isDown = false;
+                let startX;
+                let scrollLeft;
+
+                container.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    container.classList.add('cursor-grabbing');
+                    startX = e.pageX - container.offsetLeft;
+                    scrollLeft = container.scrollLeft;
+                });
+
+                container.addEventListener('mouseleave', () => {
+                    isDown = false;
+                    container.classList.remove('cursor-grabbing');
+                });
+
+                container.addEventListener('mouseup', () => {
+                    isDown = false;
+                    container.classList.remove('cursor-grabbing');
+                });
+
+                container.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - container.offsetLeft;
+                    const walk = (x - startX) * 2; // سرعة السحب
+                    container.scrollLeft = scrollLeft - walk;
+                });
+            });
+        });
+
+        function syncMaps() {
+            menuMap.clear();
+            menuItems.forEach(item => menuMap.set(item.id, item));
+            categoriesMap.clear();
+            categories.forEach(cat => categoriesMap.set(cat.id, cat));
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').innerText = msg;
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3000);
+        }
+
+        function playNewOrderSound() {
+            try {
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                audio.play().catch(() => {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.4);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.4);
+                });
+            } catch(e) {}
+        }
+
+        function triggerFlashPromo() {
+            localStorage.setItem('club_cafe_flash_promo', 'true');
+            showToast("⚡ تم إرسال عرض الفلاش للزباين بنجاح!");
+            checkFlashPromoStatus();
+        }
+
+        function checkFlashPromoStatus() {
+            const isPromoOn = localStorage.getItem('club_cafe_flash_promo') === 'true';
+            const promoBanner = document.getElementById('flashPromoClientBanner');
+            if (isPromoOn && promoBanner) {
+                promoBanner.classList.remove('hidden');
+            } else if (promoBanner) {
+                promoBanner.classList.add('hidden');
+            }
+        }
+
+        function applyFlashPromo() {
+            flashDiscountActive = true;
+            localStorage.removeItem('club_cafe_flash_promo');
+            document.getElementById('flashPromoClientBanner').classList.add('hidden');
+            showToast("🎉 تم تطبيق خصم 10% على سلتك بنجاح!");
+            updateCartUI();
+        }
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'club_cafe_flash_promo') {
+                checkFlashPromoStatus();
+            }
+            if (e.key === 'club_cafe_orders_v28') {
+                try {
+                    ordersHistory = JSON.parse(e.newValue || '[]');
+                    updateClientTrackerBanner();
+                    if (isAdminLoggedIn) updateAdminDashboard();
+                } catch(err) {}
+            }
+        });
+
+        function switchAdminTab(tabName) {
+            ['formules', 'categories', 'diets', 'allergens', 'clients', 'orders'].forEach(t => {
+                const el = document.getElementById(`adminTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if(el) el.classList.add('hidden');
+                if(btn) btn.className = "pb-3 px-4 font-bold text-xs border-b-2 border-transparent text-slate-500 hover:text-burgundy-900 transition flex items-center gap-2 flex-shrink-0";
+            });
+            const targetTab = document.getElementById(`adminTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+            const targetBtn = document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+            if(targetTab) targetTab.classList.remove('hidden');
+            if(targetBtn) targetBtn.className = "pb-3 px-4 font-bold text-xs border-b-2 border-burgundy-800 text-burgundy-900 transition flex items-center gap-2 flex-shrink-0";
+
+            if (tabName === 'allergens') {
+                renderAdminMatrixTable();
+            }
+            if (tabName === 'clients') {
+                updateClientsTabUI();
+            }
+        }
+
+        function updateClientsTabUI() {
+            const cartList = document.getElementById('adminClientsCartList');
+            const favList = document.getElementById('adminClientsFavList');
+            const trendingList = document.getElementById('adminTrendingFavList');
+            const activeCartsStat = document.getElementById('statActiveCarts');
+            
+            if (!cartList || !favList || !trendingList) return;
+
+            const totalActiveCarts = cart.length > 0 ? 1 : 0;
+            if (activeCartsStat) {
+                activeCartsStat.innerText = `🛒 سلال نشطة : ${totalActiveCarts}`;
+            }
+
+            if (cart.length === 0) {
+                cartList.innerHTML = `<p class="text-slate-400 italic">Aucun article dans le panier pour l'instant.</p>`;
+            } else {
+                cartList.innerHTML = cart.map(i => `
+                    <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border">
+                        <span class="font-bold"><b>${i.qty}x</b> ${i.name}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-burgundy-800 font-black">${(i.price * i.qty).toFixed(2)} €</span>
+                            <button onclick="triggerFlashPromo()" class="px-2 py-1 bg-amber-500 text-burgundy-900 text-[10px] font-extrabold rounded shadow hover:bg-amber-400" title="إرسال عرض فلاش للزبون">⚡ Flash Promo</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const favItems = menuItems.filter(i => favorites.includes(i.id));
+            if (favItems.length === 0) {
+                favList.innerHTML = `<p class="text-slate-400 italic">Aucun favori enregistré.</p>`;
+                trendingList.innerHTML = `<p class="text-xs text-slate-400 italic">Aucun favori pour le moment.</p>`;
+            } else {
+                favList.innerHTML = favItems.map(i => `
+                    <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border">
+                        <span class="font-bold">${i.name}</span>
+                        <span class="text-burgundy-800 font-black">${Number(i.price).toFixed(2)} €</span>
+                    </div>
+                `).join('');
+
+                const trendingItems = favItems.slice(0, 20);
+                trendingList.innerHTML = trendingItems.map((i, index) => `
+                    <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-amber-200 shadow-sm flex-shrink-0">
+                        <span class="w-5 h-5 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center">${index + 1}</span>
+                        <img src="${i.img}" class="w-7 h-7 rounded-lg object-cover">
+                        <div>
+                            <p class="text-xs font-bold text-slate-800">${i.name}</p>
+                            <p class="text-[10px] text-burgundy-800 font-black">${Number(i.price).toFixed(2)} € (Stock: ${i.infinite ? 'Infini' : i.stock})</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function setOrderFilter(status) {
+            currentOrderFilter = status;
+            ['all', 'En attente de paiement', 'En préparation', 'Prêt'].forEach(s => {
+                const mapKey = s === 'all' ? 'All' : (s === 'En attente de paiement' ? 'Pending' : (s === 'En préparation' ? 'Prep' : 'Ready'));
+                const btn = document.getElementById(`orderFilter${mapKey}`);
+                if (btn) {
+                    if (s === status) btn.className = "px-3 py-1 rounded-lg text-xs font-bold bg-burgundy-800 text-amber-300 shadow";
+                    else btn.className = "px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-700 border";
+                }
+            });
+            updateAdminDashboard();
+        }
+
+        function toggleRushHour() {
+            isRushHour = !isRushHour;
+            const btn = document.getElementById('rushHourToggleBtn');
+            const banner = document.getElementById('rushBanner');
+            if (isRushHour) {
+                btn.className = "px-3 py-1 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow transition animate-pulse";
+                btn.innerText = "🔴 Café : Rush Hour";
+                banner.classList.remove('hidden');
+            } else {
+                btn.className = "px-3 py-1 rounded-lg text-xs font-extrabold bg-emerald-600 text-white shadow transition";
+                btn.innerText = "🟢 Café : Ouvert";
+                banner.classList.add('hidden');
+            }
+        }
+
+        const defaultDietaryFilters = [
+            { 
+                id: "lactose", 
+                fr: "🥛 Sans Lactose", 
+                subOptions: [
+                    {name: "Lait d'amande", price: 0.50, enabled: true}, 
+                    {name: "Lait de soja", price: 0.50, enabled: true}, 
+                    {name: "Lait d'avoine", price: 0.60, enabled: true}
+                ] 
+            },
+            { 
+                id: "veggie", 
+                fr: "🌱 Végétarien", 
+                subOptions: [
+                    {name: "Fromage végan", price: 1.00, enabled: true}, 
+                    {name: "Sans viande", price: 0.00, enabled: true}
+                ] 
+            },
+            { id: "halal", fr: "🥩 Halal", subOptions: [] }
+        ];
+
+        let dietaryFilters = [];
+        try {
+            const savedDiets = localStorage.getItem('club_cafe_diets_v5');
+            dietaryFilters = savedDiets ? JSON.parse(savedDiets) : defaultDietaryFilters;
+        } catch(e) { dietaryFilters = defaultDietaryFilters; }
+
+        let matrixColumns = [];
+        try {
+            const savedCols = localStorage.getItem('club_cafe_matrix_cols_v1');
+            matrixColumns = savedCols ? JSON.parse(savedCols) : ["1", "2", "3", "4", "5"];
+        } catch(e) { matrixColumns = ["1", "2", "3", "4", "5"]; }
+
+        let matrixRows = [];
+        try {
+            const savedRows = localStorage.getItem('club_cafe_matrix_rows_v1');
+            matrixRows = savedRows ? JSON.parse(savedRows) : [
+                { name: "Gluten", dots: [true, false, true, false, false] },
+                { name: "Lait", dots: [false, true, false, true, true] },
+                { name: "Poisson", dots: [false, false, true, false, true] },
+                { name: "Arachides", dots: [true, true, true, false, false] },
+                { name: "Œufs", dots: [false, true, false, true, false] },
+                { name: "Soja", dots: [false, false, true, false, true] },
+                { name: "Fruits à coque", dots: [true, false, true, true, false] },
+                { name: "Sésame", dots: [false, true, false, false, true] }
+            ];
+        } catch(e) {
+            matrixRows = [
+                { name: "Gluten", dots: [true, false, true, false, false] },
+                { name: "Lait", dots: [false, true, false, true, true] },
+                { name: "Poisson", dots: [false, false, true, false, true] },
+                { name: "Arachides", dots: [true, true, true, false, false] },
+                { name: "Œufs", dots: [false, true, false, true, false] },
+                { name: "Soja", dots: [false, false, true, false, true] },
+                { name: "Fruits à coque", dots: [true, false, true, true, false] },
+                { name: "Sésame", dots: [false, true, false, false, true] }
+            ];
+        }
+
+        const defaultCategories = [
+            { id: "sandwiches", fr: "Sandwiches", img: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=500&q=80", allowedAddons: [{name: "Extra Fromage", price: 1.00, enabled: true}, {name: "Sauce Spéciale", price: 0.50, enabled: true}] },
+            { id: "plats", fr: "Plats Chauds & Salades", img: "https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=500&q=80", allowedAddons: [{name: "Extra Fromage", price: 1.00, enabled: true}] },
+            { id: "boissons_chaudes", fr: "Boissons Chaudes", img: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&w=500&q=80", allowedAddons: [] },
+            { id: "boissons_glacees", fr: "Boissons Glacées", img: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=500&q=80", allowedAddons: [] },
+            { id: "patisseries", fr: "Pâtisseries Premium", img: "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=500&q=80", allowedAddons: [] },
+            { id: "gaufres", fr: "Nos Gaufres", img: "https://images.unsplash.com/photo-1562376552-0d160a2f238d?auto=format&fit=crop&w=500&q=80", allowedAddons: [] }
+        ];
+
+        let categories = [];
+        try {
+            const savedCat = localStorage.getItem('club_cafe_categories_v14');
+            categories = savedCat ? JSON.parse(savedCat) : defaultCategories;
+        } catch(e) { categories = defaultCategories; }
+
+        const defaultFormules = [
+            { id: 1, title: "Offre Club", desc: "1 Sandwich au choix + 1 Pâtisserie Deluxe + 1 Boisson 33cl.", price: 8.90, badge: "OFFRE TOP", stock: 15, infinite: false, img: "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=600&q=80" },
+            { id: 2, title: "Menu Étudiant", desc: "Panini ou Panino + Canette 33cl.", price: 5.50, badge: "STUDENT", stock: 999, infinite: true, img: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&q=80" }
+        ];
+
+        let formules = [];
+        try {
+            const savedFormules = localStorage.getItem('club_cafe_formules_v3');
+            formules = savedFormules ? JSON.parse(savedFormules) : defaultFormules;
+        } catch(e) { formules = defaultFormules; }
+
+        const defaultItems = [
+            { id: 1, name: "Thon", price: 5.20, cat: "sandwiches", stock: 10, img: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=500&q=80" },
+            { id: 2, name: "Poulet", price: 5.50, cat: "sandwiches", stock: 8, img: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=500&q=80" },
+            { id: 7, name: "Café Latte", price: 3.50, cat: "boissons_chaudes", stock: 999, infinite: true, hasTemp: true, hasSize: true, img: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&w=500&q=80" }
+        ];
+
+        let menuItems = [];
+        try {
+            const saved = localStorage.getItem('club_cafe_menu_v39');
+            menuItems = saved ? JSON.parse(saved) : defaultItems;
+        } catch(e) { menuItems = defaultItems; }
+
+        let ordersHistory = [];
+        try {
+            const savedOrd = localStorage.getItem('club_cafe_orders_v28');
+            ordersHistory = savedOrd ? JSON.parse(savedOrd) : [];
+        } catch(e) { ordersHistory = []; }
+
+        let favorites = [];
+        try {
+            const savedFav = localStorage.getItem('club_cafe_favs_v2');
+            favorites = savedFav ? JSON.parse(savedFav) : [];
+        } catch(e) { favorites = []; }
+
+        let cart = [];
+        try {
+            const savedCart = localStorage.getItem('club_cafe_cart_v2');
+            cart = savedCart ? JSON.parse(savedCart) : [];
+        } catch(e) { cart = []; }
+
+        let currentAdminPassword = localStorage.getItem('club_cafe_admin_pass') || '123456';
+        let currentCustomizingItem = null;
+
+        function saveToStorage() {
+            try {
+                localStorage.setItem('club_cafe_categories_v14', JSON.stringify(categories));
+                localStorage.setItem('club_cafe_diets_v5', JSON.stringify(dietaryFilters));
+                localStorage.setItem('club_cafe_menu_v39', JSON.stringify(menuItems));
+                localStorage.setItem('club_cafe_formules_v3', JSON.stringify(formules));
+                localStorage.setItem('club_cafe_matrix_cols_v1', JSON.stringify(matrixColumns));
+                localStorage.setItem('club_cafe_matrix_rows_v1', JSON.stringify(matrixRows));
+                localStorage.setItem('club_cafe_orders_v28', JSON.stringify(ordersHistory));
+                localStorage.setItem('club_cafe_favs_v2', JSON.stringify(favorites));
+                localStorage.setItem('club_cafe_cart_v2', JSON.stringify(cart));
+                localStorage.setItem('club_cafe_admin_pass', currentAdminPassword);
+                syncMaps();
+            } catch(e) {}
+        }
+        syncMaps();
+
+        function exportDatabaseJSON() {
+            const dbData = { categories, dietaryFilters, menuItems, formules, matrixColumns, matrixRows, ordersHistory };
+            const blob = new Blob([JSON.stringify(dbData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `club_cafe_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            showToast("💾 تم تصدير النسخة الاحتياطية بنجاح !");
+        }
+
+        function importDatabaseJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.menuItems) menuItems = imported.menuItems;
+                    if (imported.categories) categories = imported.categories;
+                    if (imported.formules) formules = imported.formules;
+                    if (imported.dietaryFilters) dietaryFilters = imported.dietaryFilters;
+                    if (imported.matrixColumns) matrixColumns = imported.matrixColumns;
+                    if (imported.matrixRows) matrixRows = imported.matrixRows;
+                    if (imported.ordersHistory) ordersHistory = imported.ordersHistory;
+                    
+                    saveToStorage();
+                    renderCategoriesGrid();
+                    renderQuickCategoryPills();
+                    renderDietaryFiltersBar();
+                    renderSubDietaryBar();
+                    renderFormulesGrid();
+                    updateAdminDashboard();
+                    showToast("⚡ تم استيراد البيانات بنجاح !");
+                } catch(err) {
+                    alert("❌ ملف غير صالح أو تالف !");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function handleAiScan(e, type) {
+            const file = e.target.files[0];
+            if (!file) return;
+            showToast("✨ Analyse par l'IA en cours...");
+            setTimeout(() => {
+                if (type === 'product') {
+                    document.getElementById('hierProdName').value = "Sandwich Saumon Avocat";
+                    document.getElementById('hierProdPrice').value = "7.50";
+                    document.getElementById('hierProdStock').value = "15";
+                    document.getElementById('hierProdImg').value = "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=500&q=80";
+                } else if (type === 'formule') {
+                    document.getElementById('newFormuleTitle').value = "Offre Gourmande";
+                    document.getElementById('newFormulePrice').value = "9.90";
+                    document.getElementById('newFormuleBadge').value = "PROMO";
+                    document.getElementById('newFormuleStock').value = "20";
+                    document.getElementById('newFormuleDesc').value = "Plat chaud + Dessert + Boisson.";
+                    document.getElementById('newFormuleImg').value = "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=600&q=80";
+                } else if (type === 'category') {
+                    document.getElementById('newCatId').value = "desserts";
+                    document.getElementById('newCatName').value = "Desserts Maison";
+                    document.getElementById('newCatImg').value = "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=500&q=80";
+                }
+                showToast("🎉 Données remplies avec succès par l'IA !");
+            }, 1200);
+        }
+
+        function duplicateProduct(id) {
+            const item = menuMap.get(id);
+            if (!item) return;
+            const newItem = { ...item, id: Date.now(), name: item.name + " (Copie)" };
+            menuItems.push(newItem);
+            saveToStorage();
+            updateAdminDashboard();
+            showToast(`📋 تم نسخ المنتج بنجاح!`);
+        }
+
+        function duplicateFormule(id) {
+            const f = formules.find(item => item.id == id);
+            if (!f) return;
+            const newF = { ...f, id: Date.now(), title: f.title + " (Copie)" };
+            formules.push(newF);
+            saveToStorage();
+            renderFormulesGrid();
+            updateAdminDashboard();
+            showToast(`📋 تم نسخ العرض بنجاح!`);
+        }
+
+        function moveFormuleOrder(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= formules.length) return;
+            const temp = formules[index];
+            formules[index] = formules[newIndex];
+            formules[newIndex] = temp;
+            saveToStorage();
+            renderFormulesGrid();
+            updateAdminDashboard();
+        }
+
+        function updateInlineProduct(id, field, value) {
+            const item = menuMap.get(id);
+            if (!item) return;
+            if (field === 'name') item.name = value.trim() || "Produit";
+            if (field === 'price') item.price = parseFloat(value) || 0;
+            if (field === 'stock') item.stock = parseInt(value) || 0;
+            saveToStorage();
+            updateAdminDashboard();
+            showToast("⚡ تم التحديث المباشر!");
+        }
+
+        function updateInlineFormule(id, field, value) {
+            const f = formules.find(item => item.id == id);
+            if (!f) return;
+            if (field === 'title') f.title = value.trim() || "Offre";
+            if (field === 'price') f.price = parseFloat(value) || 0;
+            if (field === 'stock') f.stock = parseInt(value) || 0;
+            saveToStorage();
+            renderFormulesGrid();
+            showToast("⚡ تم التحديث المباشر للعرض!");
+        }
+
+        function renderFormulesGrid() {
+            const container = document.getElementById('formulesGridContainer');
+            if (!container) return;
+            const availableFormules = formules.filter(f => f.infinite || (f.stock !== undefined ? f.stock > 0 : true));
+            if (availableFormules.length === 0) {
+                container.innerHTML = `<div class="col-span-2 text-center text-slate-400 py-4">Aucune offre disponible</div>`;
+                return;
+            }
+            container.innerHTML = availableFormules.map(f => `
+                <div class="min-w-[280px] sm:min-w-[340px] md:min-w-[420px] w-[300px] sm:w-[360px] md:w-[440px] bg-white rounded-2xl shadow-md border border-amber-200 overflow-hidden flex flex-col justify-between group hover:shadow-xl transition duration-300 flex-shrink-0">
+                    <div class="relative h-36 sm:h-40 bg-slate-100">
+                        <img src="${f.img}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                        <span class="absolute top-3 right-3 bg-red-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase">${f.badge}</span>
+                    </div>
+                    <div class="p-4 space-y-2 flex flex-col justify-between flex-grow">
+                        <div>
+                            <h3 class="font-extrabold text-sm sm:text-base text-burgundy-900">${f.title}</h3>
+                            <p class="text-xs text-slate-600 mt-1">${f.desc}</p>
+                        </div>
+                        <div class="flex items-center justify-between pt-2 border-t mt-2">
+                            <span class="text-base sm:text-lg font-black text-burgundy-800">${Number(f.price).toFixed(2)} €</span>
+                            <button onclick="addSpecialToCart('${f.title}', ${f.price}, '${f.img}', ${f.id})" class="px-3.5 py-1.5 bg-burgundy-800 text-amber-300 rounded-lg text-xs font-bold shadow transition hover:scale-105">
+                                <i class="fa-solid fa-plus"></i> Ajouter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleInfiniteFormuleStockInput(isChecked) {
+            const stockInput = document.getElementById('newFormuleStock');
+            if (isChecked) {
+                stockInput.value = 999;
+                stockInput.disabled = true;
+                stockInput.classList.add('bg-slate-100', 'text-slate-400');
+            } else {
+                stockInput.disabled = false;
+                stockInput.classList.remove('bg-slate-100', 'text-slate-400');
+                if(stockInput.value == 999) stockInput.value = 10;
+            }
+        }
+
+        function saveFormule(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editFormuleId').value;
+            let titleVal = document.getElementById('newFormuleTitle').value.trim();
+            const title = titleVal === "" ? "Offre sans nom" : titleVal;
+            let priceVal = document.getElementById('newFormulePrice').value;
+            const price = priceVal === "" ? 0.00 : parseFloat(priceVal);
+            let badgeVal = document.getElementById('newFormuleBadge').value.trim();
+            const badge = badgeVal === "" ? "PROMO" : badgeVal;
+            let descVal = document.getElementById('newFormuleDesc').value.trim();
+            const desc = descVal === "" ? "Description non disponible" : descVal;
+            let imgVal = document.getElementById('newFormuleImg').value.trim();
+            const img = imgVal === "" ? "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=600&q=80" : imgVal;
+            
+            const isInfinite = document.getElementById('newFormuleInfinite').checked;
+            let stockVal = document.getElementById('newFormuleStock').value;
+            const stock = isInfinite ? 999 : (stockVal === "" ? 10 : parseInt(stockVal));
+
+            if (editId) {
+                const index = formules.findIndex(f => f.id == editId);
+                if (index !== -1) formules[index] = { ...formules[index], id: Number(editId), title, price, badge, desc, img, stock, infinite: isInfinite };
+                showToast("Offre mise à jour !");
+                resetFormuleForm();
+            } else {
+                formules.push({ id: Date.now(), title, price, badge, desc, img, stock, infinite: isInfinite });
+                showToast("Offre ajoutée !");
+                e.target.reset();
+            }
+            saveToStorage();
+            renderFormulesGrid();
+            updateAdminDashboard();
+        }
+
+        function editFormule(id) {
+            const f = formules.find(item => item.id == id);
+            if (!f) return;
+            document.getElementById('editFormuleId').value = f.id;
+            document.getElementById('newFormuleTitle').value = f.title;
+            document.getElementById('newFormulePrice').value = f.price;
+            document.getElementById('newFormuleBadge').value = f.badge;
+            document.getElementById('newFormuleDesc').value = f.desc;
+            document.getElementById('newFormuleImg').value = f.img;
+            document.getElementById('newFormuleStock').value = f.infinite ? 999 : (f.stock !== undefined ? f.stock : 10);
+            
+            const infCheckbox = document.getElementById('newFormuleInfinite');
+            infCheckbox.checked = !!f.infinite;
+            toggleInfiniteFormuleStockInput(infCheckbox.checked);
+
+            document.getElementById('formuleFormTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-amber-500"></i> <span>Modifier l\'Offre : ' + f.title + '</span>';
+            document.getElementById('cancelFormuleEditBtn').classList.remove('hidden');
+        }
+
+        function resetFormuleForm() {
+            document.getElementById('editFormuleId').value = "";
+            document.getElementById('formuleFormTitle').innerHTML = '<i class="fa-solid fa-circle-plus text-amber-500"></i> <span>Ajouter ou modifier une Offre</span>';
+            document.getElementById('cancelFormuleEditBtn').classList.add('hidden');
+            const form = document.querySelector('#adminTabFormules form');
+            if (form) form.reset();
+            toggleInfiniteFormuleStockInput(false);
+        }
+
+        function deleteFormule(id) {
+            if (confirm("Supprimer cette offre ?")) {
+                formules = formules.filter(f => f.id !== id);
+                saveToStorage();
+                renderFormulesGrid();
+                updateAdminDashboard();
+                showToast("Offre supprimée");
+            }
+        }
+
+        function saveCategory(e) {
+            e.preventDefault();
+            const originalId = document.getElementById('editCatOriginalId').value;
+            let idVal = document.getElementById('newCatId').value.trim().toLowerCase();
+            const id = idVal === "" ? "cat_" + Date.now() : idVal;
+            let frVal = document.getElementById('newCatName').value.trim();
+            const fr = frVal === "" ? "Nouvelle Catégorie" : frVal;
+            let imgVal = document.getElementById('newCatImg').value.trim();
+            const img = imgVal === "" ? "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=500&q=80" : imgVal;
+
+            if (originalId) {
+                const index = categories.findIndex(c => c.id === originalId);
+                if (index !== -1) {
+                    categories[index] = { ...categories[index], id, fr, img };
+                    if (originalId !== id) {
+                        menuItems.forEach(item => {
+                            if (item.cat === originalId) item.cat = id;
+                        });
+                    }
+                }
+                showToast("Catégorie mise à jour !");
+                resetCategoryForm();
+            } else {
+                if (categories.some(c => c.id === id)) {
+                    alert("❌ Cet ID de catégorie existe déjà !");
+                    return;
+                }
+                categories.push({ id, fr, img, allowedAddons: [] });
+                showToast("Catégorie ajoutée !");
+                e.target.reset();
+            }
+
+            saveToStorage();
+            renderCategoriesGrid();
+            updateAdminDashboard();
+        }
+
+        function editCategory(catId) {
+            const cat = categories.find(c => c.id === catId);
+            if (!cat) return;
+            document.getElementById('editCatOriginalId').value = cat.id;
+            document.getElementById('newCatId').value = cat.id;
+            document.getElementById('newCatName').value = cat.fr;
+            document.getElementById('newCatImg').value = cat.img;
+            document.getElementById('categoryFormTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-amber-500"></i> <span>Modifier la catégorie : ' + cat.fr + '</span>';
+            document.getElementById('cancelCatEditBtn').classList.remove('hidden');
+            document.getElementById('newCatName').focus();
+        }
+
+        function resetCategoryForm() {
+            document.getElementById('editCatOriginalId').value = "";
+            document.getElementById('categoryFormTitle').innerHTML = '<i class="fa-solid fa-circle-plus text-amber-500"></i> <span>Ajouter ou modifier une catégorie</span>';
+            document.getElementById('cancelCatEditBtn').classList.add('hidden');
+            const form = document.querySelector('#adminTabCategories form');
+            if (form) form.reset();
+        }
+
+        function deleteCategory(catId) {
+            if (confirm("Supprimer cette catégorie ? Les produits associés n'auront plus de catégorie active.")) {
+                categories = categories.filter(c => c.id !== catId);
+                saveToStorage();
+                renderCategoriesGrid();
+                updateAdminDashboard();
+                showToast("Catégorie supprimée");
+            }
+        }
+
+        function addAddonToCategory(catId) {
+            const addonName = prompt("Nom du supplément (ex: Lait d'amande, Extra Fromage) :");
+            if (!addonName) return;
+            const addonPriceStr = prompt("Prix du supplément en € (ex: 1.00) :", "1.00");
+            const addonPrice = parseFloat(addonPriceStr) || 0;
+
+            const cat = categories.find(c => c.id === catId);
+            if (cat) {
+                if (!cat.allowedAddons) cat.allowedAddons = [];
+                cat.allowedAddons.push({ name: addonName, price: addonPrice, enabled: true });
+                saveToStorage();
+                updateAdminDashboard();
+                showToast("✨ Supplément ajouté avec son prix !");
+            }
+        }
+
+        function toggleCategoryAddonStatus(catId, addonIndex) {
+            const cat = categories.find(c => c.id === catId);
+            if (cat && cat.allowedAddons && cat.allowedAddons[addonIndex]) {
+                cat.allowedAddons[addonIndex].enabled = !cat.allowedAddons[addonIndex].enabled;
+                saveToStorage();
+                updateAdminDashboard();
+                showToast("⚡ État du supplément mis à jour !");
+            }
+        }
+
+        function removeAddonFromCategory(catId, addonIndex) {
+            const cat = categories.find(c => c.id === catId);
+            if (cat && cat.allowedAddons) {
+                cat.allowedAddons.splice(addonIndex, 1);
+                saveToStorage();
+                updateAdminDashboard();
+                showToast("Supplément supprimé");
+            }
+        }
+
+        function toggleDietSubOptionStatus(dietId, subIndex) {
+            const diet = dietaryFilters.find(d => d.id === dietId);
+            if (diet && diet.subOptions && diet.subOptions[subIndex]) {
+                diet.subOptions[subIndex].enabled = !diet.subOptions[subIndex].enabled;
+                saveToStorage();
+                updateAdminDashboard();
+                showToast("⚡ État de l'option mis à jour !");
+            }
+        }
+
+        function matrixAddColumn() {
+            const nextColName = String(matrixColumns.length + 1);
+            matrixColumns.push(nextColName);
+            matrixRows.forEach(row => {
+                if (!row.dots) row.dots = [];
+                row.dots.push(false);
+            });
+            saveToStorage();
+            renderAdminMatrixTable();
+            showToast("➕ تم إضافة عمود جديد ! / Colonne ajoutée !");
+        }
+
+        function matrixRemoveColumn() {
+            if (matrixColumns.length <= 1) {
+                alert("⚠️ لا يمكن حذف جميع الأعمدة! / Impossible de supprimer toutes les colonnes !");
+                return;
+            }
+            matrixColumns.pop();
+            matrixRows.forEach(row => {
+                if (row.dots) row.dots.pop();
+            });
+            saveToStorage();
+            renderAdminMatrixTable();
+            showToast("➖ تم حذف العمود الأخير ! / Colonne supprimée !");
+        }
+
+        function matrixSaveRow(e) {
+            e.preventDefault();
+            const input = document.getElementById('newMatrixRowName');
+            const editIndex = parseInt(document.getElementById('editMatrixRowIndex').value);
+            const val = input.value.trim();
+            if (!val) return;
+
+            if (editIndex >= 0) {
+                matrixRows[editIndex].name = val;
+                showToast("✅ تم تحديث السطر بنجاح ! / Ligne mise à jour !");
+            } else {
+                let defaultDots = matrixColumns.map(() => false);
+                matrixRows.push({ name: val, dots: defaultDots });
+                showToast("✅ تم إضافة السطر بنجاح ! / Ligne ajoutée !");
+            }
+            saveToStorage();
+            renderAdminMatrixTable();
+            resetMatrixRowForm();
+        }
+
+        function resetMatrixRowForm() {
+            document.getElementById('newMatrixRowName').value = '';
+            document.getElementById('editMatrixRowIndex').value = '-1';
+            document.getElementById('cancelMatrixRowEdit').classList.add('hidden');
+        }
+
+        function matrixDeleteRow(index) {
+            if (confirm("هل أنت متأكد من حذف هذا السطر؟ / Êtes-vous sûr de supprimer cette ligne ?")) {
+                matrixRows.splice(index, 1);
+                saveToStorage();
+                renderAdminMatrixTable();
+                showToast("🗑️ تم حذف السطر ! / Ligne supprimée !");
+            }
+        }
+
+        function renderAdminMatrixTable() {
+            const adminHead = document.getElementById('adminMatrixEditorHead');
+            const adminBody = document.getElementById('adminMatrixEditorBody');
+            if (!adminHead || !adminBody) return;
+
+            let headHtml = `<tr><th class="p-2 border">Allergène</th>`;
+            matrixColumns.forEach((col, cIdx) => {
+                headHtml += `<th class="p-2 border text-center">
+                    <input type="text" id="matCol_${cIdx}" value="${col}" class="w-14 text-center font-bold bg-white border rounded px-1 py-0.5">
+                </th>`;
+            });
+            headHtml += `<th class="p-2 border text-center">Actions</th></tr>`;
+            adminHead.innerHTML = headHtml;
+
+            let bodyHtml = '';
+            matrixRows.forEach((row, rIdx) => {
+                bodyHtml += `<tr class="border-b">
+                    <td class="p-2 border font-bold">
+                        <span class="text-xs text-amber-600">${String.fromCharCode(65 + rIdx)}</span> 
+                        <input type="text" id="matRowName_${rIdx}" value="${row.name}" class="w-32 font-bold bg-white border rounded px-2 py-0.5 text-xs">
+                    </td>`;
+                matrixColumns.forEach((col, cIdx) => {
+                    const checked = row.dots && row.dots[cIdx];
+                    bodyHtml += `<td class="p-2 border text-center">
+                        <input type="checkbox" id="matDot_${rIdx}_${cIdx}" ${checked ? 'checked' : ''} class="w-4 h-4 text-burgundy-800 rounded cursor-pointer">
+                    </td>`;
+                });
+                bodyHtml += `<td class="p-2 border text-center">
+                    <button onclick="matrixDeleteRow(${rIdx})" class="px-2 py-1 bg-red-600 text-white rounded text-xs font-bold">حذف</button>
+                </td></tr>`;
+            });
+            bodyHtml += `<tr><td colspan="${matrixColumns.length + 2}" class="p-3 text-center bg-slate-100">
+                <button onclick="saveAdminMatrixChanges()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow transition">
+                    💾 حفظ كافة التعديلات (Sauvegarder)
+                </button>
+            </td></tr>`;
+            adminBody.innerHTML = bodyHtml;
+        }
+
+        function saveAdminMatrixChanges() {
+            matrixColumns.forEach((col, cIdx) => {
+                const inputCol = document.getElementById(`matCol_${cIdx}`);
+                if (inputCol) {
+                    matrixColumns[cIdx] = inputCol.value.trim() || String(cIdx + 1);
+                }
+            });
+
+            matrixRows.forEach((row, rIdx) => {
+                const inputRowName = document.getElementById(`matRowName_${rIdx}`);
+                if (inputRowName) {
+                    row.name = inputRowName.value.trim() || `Ligne ${rIdx + 1}`;
+                }
+                if (!row.dots) row.dots = matrixColumns.map(() => false);
+                matrixColumns.forEach((col, cIdx) => {
+                    const chk = document.getElementById(`matDot_${rIdx}_${cIdx}`);
+                    if (chk) {
+                        row.dots[cIdx] = chk.checked;
+                    }
+                });
+            });
+
+            saveToStorage();
+            renderAdminMatrixTable();
+            showToast("💾 تم حفظ تعديلات المصفوفة بنجاح!");
+        }
+
+        function saveProductHierarchical(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editProdId').value;
+            const name = document.getElementById('hierProdName').value.trim();
+            const price = parseFloat(document.getElementById('hierProdPrice').value) || 0;
+            const cat = document.getElementById('hierProdCatSelect').value;
+            const stock = parseInt(document.getElementById('hierProdStock').value) || 10;
+            const hasTemp = document.getElementById('hierProdHasTemp').checked;
+            const hasSize = document.getElementById('hierProdHasSize').checked;
+            const img = document.getElementById('hierProdImg').value.trim() || "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=500&q=80";
+
+            if (editId) {
+                const index = menuItems.findIndex(i => i.id == editId);
+                if (index !== -1) {
+                    menuItems[index] = { ...menuItems[index], name, price, cat, stock, hasTemp, hasSize, img };
+                }
+                showToast("Produit mis à jour !");
+                document.getElementById('editProdId').value = "";
+            } else {
+                menuItems.push({ id: Date.now(), name, price, cat, stock, infinite: false, hasTemp, hasSize, img });
+                showToast("Produit ajouté dans la catégorie !");
+            }
+
+            e.target.reset();
+            saveToStorage();
+            updateAdminDashboard();
+        }
+
+        function editHierarchicalProduct(prodId) {
+            const item = menuItems.find(i => i.id === prodId);
+            if (!item) return;
+            document.getElementById('editProdId').value = item.id;
+            document.getElementById('hierProdName').value = item.name;
+            document.getElementById('hierProdPrice').value = item.price;
+            document.getElementById('hierProdCatSelect').value = item.cat;
+            document.getElementById('hierProdStock').value = item.stock;
+            document.getElementById('hierProdImg').value = item.img;
+            document.getElementById('hierProdHasTemp').checked = !!item.hasTemp;
+            document.getElementById('hierProdHasSize').checked = !!item.hasSize;
+            document.getElementById('prodFormTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-amber-500"></i> <span>Modifier le produit : ' + item.name + '</span>';
+            document.getElementById('hierProdName').focus();
+        }
+
+        function deleteHierarchicalProduct(prodId) {
+            if (confirm("Supprimer ce produit ?")) {
+                menuItems = menuItems.filter(i => i.id !== prodId);
+                saveToStorage();
+                updateAdminDashboard();
+                showToast("Produit supprimé");
+            }
+        }
+
+        function filterDietary(type) {
+            currentDietaryFilter = type;
+            currentSubDietaryFilter = 'all';
+            renderDietaryFiltersBar();
+            renderSubDietaryBar();
+            renderCategoriesGrid();
+        }
+
+        function filterSubDietary(subType) {
+            currentSubDietaryFilter = subType;
+            renderSubDietaryBar();
+            renderCategoriesGrid();
+        }
+
+        function renderDietaryFiltersBar() {
+            const bar = document.getElementById('dietaryFiltersBar');
+            if (!bar) return;
+            let html = `<button onclick="filterDietary('all')" class="px-4 py-2 rounded-full ${currentDietaryFilter === 'all' ? 'bg-burgundy-800 text-amber-300 shadow' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'} text-xs font-bold flex-shrink-0 transition">🍽️ Tous</button>`;
+            dietaryFilters.forEach(diet => {
+                const isActive = currentDietaryFilter === diet.id;
+                html += `<button onclick="filterDietary('${diet.id}')" class="px-4 py-2 rounded-full ${isActive ? 'bg-burgundy-800 text-amber-300 shadow' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'} text-xs font-bold flex-shrink-0 transition">${diet.fr}</button>`;
+            });
+            bar.innerHTML = html;
+        }
+
+        function renderSubDietaryBar() {
+            const subBar = document.getElementById('subDietaryFiltersBar');
+            if (!subBar) return;
+            const activeDiet = dietaryFilters.find(d => d.id === currentDietaryFilter);
+            if (!activeDiet || !activeDiet.subOptions || activeDiet.subOptions.length === 0) {
+                subBar.classList.add('hidden');
+                subBar.innerHTML = '';
+                return;
+            }
+            const activeSubOpts = activeDiet.subOptions.filter(sub => sub.enabled !== false);
+            if (activeSubOpts.length === 0) {
+                subBar.classList.add('hidden');
+                subBar.innerHTML = '';
+                return;
+            }
+
+            let html = `<button onclick="filterSubDietary('all')" class="px-3 py-1 rounded-full ${currentSubDietaryFilter === 'all' ? 'bg-burgundy-800 text-amber-300 shadow' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'} text-[11px] font-bold flex-shrink-0 transition">✨ Tous</button>`;
+            activeSubOpts.forEach(sub => {
+                const isSubActive = currentSubDietaryFilter === sub.name;
+                html += `<button onclick="filterSubDietary('${sub.name}')" class="px-3 py-1 rounded-full ${isSubActive ? 'bg-burgundy-800 text-amber-300 shadow' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'} text-[11px] font-bold flex-shrink-0 transition">🔹 ${sub.name}</button>`;
+            });
+            subBar.innerHTML = html;
+            subBar.classList.remove('hidden');
+        }
+
+        function renderQuickCategoryPills() {
+            const pillsContainer = document.getElementById('quickCategoryPills');
+            if (!pillsContainer) return;
+            pillsContainer.innerHTML = categories.map(cat => `
+                <button onclick="openCategoryModal('${cat.id}')" class="px-3.5 py-1.5 rounded-full bg-burgundy-900 text-cream-100 hover:bg-burgundy-700 text-xs font-bold shadow flex-shrink-0 transition flex items-center gap-1.5 hover:scale-105">
+                    <img src="${cat.img}" class="w-4 h-4 rounded-full object-cover">
+                    <span>${cat.fr}</span>
+                </button>
+            `).join('');
+        }
+
+        function renderCategoriesGrid() {
+    const container = document.getElementById('categoriesGridContainer');
+    if (!container) return;
+
+    // 1. تفريغ الحاوي أولاً
+    container.innerHTML = '';
+
+    // 2. إنشاء DocumentFragment في الذاكرة لتجميع العناصر بعيداً عن الـ DOM الرئيسي
+    const fragment = document.createDocumentFragment();
+
+    categories.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = "h-36 sm:h-44 rounded-2xl shadow-md overflow-hidden relative group cursor-pointer border border-amber-300/30 hover:scale-105 transition duration-300 flex flex-col justify-end";
+        div.setAttribute('onclick', `openCategoryModal('${cat.id}')`);
+        
+        div.innerHTML = `
+            <img src="${cat.img}" loading="lazy" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition duration-500">
+            <div class="absolute inset-0 bg-gradient-to-t from-burgundy-900/80 via-transparent to-transparent"></div>
+            <div class="relative p-3 sm:p-4 text-cream-100 flex flex-col justify-end">
+                <h3 class="font-extrabold text-base sm:text-lg tracking-wide">${cat.fr}</h3>
+                <span class="text-xs text-amber-300 font-semibold mt-1">Voir les produits <i class="fa-solid fa-arrow-up text-[10px]"></i></span>
+            </div>
+        `;
+        
+        // إضافته للـ Fragment في الذاكرة (بدون أي Reflow حتى الآن)
+        fragment.appendChild(div);
+    });
+
+    // 3. حقن الـ Fragment بالكامل في الـ DOM مرة واحدة فقط في النهاية
+    container.appendChild(fragment);
+
+    // تحديث قائمة الـ Select الخاصة بالمنتجات
+    const select = document.getElementById('hierProdCatSelect');
+    if(select) {
+        const selectFragment = document.createDocumentFragment();
+        categories.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat.id;
+            opt.textContent = cat.fr;
+            selectFragment.appendChild(opt);
+        });
+        select.innerHTML = '';
+        select.appendChild(selectFragment);
+    }
+    
+    renderQuickCategoryPills();
+}
+
+        function openCategoryModal(catId) {
+            const cat = categoriesMap.get(catId);
+            if (!cat) return;
+            document.getElementById('modalCatTitle').innerText = cat.fr;
+            document.getElementById('modalCatImg').src = cat.img;
+
+            let catItems = menuItems.filter(i => i.cat === catId);
+            if (currentDietaryFilter !== 'all') catItems = catItems.filter(i => i.diet === currentDietaryFilter);
+            if (currentSubDietaryFilter !== 'all') catItems = catItems.filter(i => i.allergens && i.allergens.includes(currentSubDietaryFilter));
+
+            const listContainer = document.getElementById('modalCatItemsList');
+            if (catItems.length === 0) {
+                listContainer.innerHTML = `<div class="text-center py-10 text-slate-400">Aucun produit trouvé</div>`;
+            } else {
+                listContainer.innerHTML = catItems.map(item => {
+                    const isAvailable = item.infinite || item.stock > 0;
+                    return `
+                        <div class="flex items-center justify-between bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm ${!isAvailable ? 'opacity-50 grayscale' : ''} transition hover:shadow-md">
+                            <div class="flex items-center gap-3">
+                                <img src="${item.img}" loading="lazy" class="w-14 h-14 rounded-lg object-cover">
+                                <div>
+                                    <h4 class="font-bold text-slate-800 text-sm">${item.name} ${!isAvailable ? `<span class="text-red-600 text-[10px]">(Épuisé)</span>` : ''}</h4>
+                                    <p class="text-xs text-burgundy-800 font-black mt-1">${Number(item.price).toFixed(2)} €</p>
+                                </div>
+                            </div>
+                            ${isAvailable ? `<button onclick="openCustomizationModal(${item.id})" class="px-3.5 py-2 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 rounded-lg text-xs font-bold shadow transition hover:scale-105"><i class="fa-solid fa-plus"></i> Ajouter</button>` : `<span class="px-3 py-1 bg-slate-200 text-slate-500 rounded-lg text-xs font-bold">Épuisé</span>`}
+                        </div>
+                    `;
+                }).join('');
+            }
+            const modal = document.getElementById('categoryDetailModal');
+            const sheet = document.getElementById('bottomSheet');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                sheet.classList.remove('translate-y-full');
+            }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCategoryModal() {
+            const modal = document.getElementById('categoryDetailModal');
+            const sheet = document.getElementById('bottomSheet');
+            modal.classList.add('opacity-0');
+            sheet.classList.add('translate-y-full');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }, 300);
+        }
+
+        function toggleFavoriteCurrent() {
+            if (!currentCustomizingItem) return;
+            const index = favorites.indexOf(currentCustomizingItem.id);
+            if (index !== -1) favorites.splice(index, 1);
+            else favorites.push(currentCustomizingItem.id);
+            saveToStorage();
+            updateFavoritesUI();
+            updateFavoriteHeartIcon();
+        }
+
+        function updateFavoriteHeartIcon() {
+            if (!currentCustomizingItem) return;
+            const favBtn = document.getElementById('custFavBtn');
+            if (favorites.includes(currentCustomizingItem.id)) {
+                favBtn.className = "p-3 rounded-full bg-red-50 text-red-600 transition shadow scale-110";
+            } else {
+                favBtn.className = "p-3 rounded-full bg-slate-100 text-slate-400 hover:text-red-600 transition shadow";
+            }
+        }
+
+        function openFavoritesModal() {
+            updateFavoritesUI();
+            const modal = document.getElementById('favoritesModal');
+            const content = document.getElementById('favoritesModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('translate-x-full');
+            }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeFavoritesModal() {
+            const modal = document.getElementById('favoritesModal');
+            const content = document.getElementById('favoritesModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.add('translate-x-full');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }, 300);
+        }
+
+        function updateFavoritesUI() {
+            const container = document.getElementById('favoritesItemsContainer');
+            const badge = document.getElementById('favBadge');
+            if (!container || !badge) return;
+            if (favorites.length > 0) { badge.innerText = favorites.length; badge.classList.remove('hidden'); }
+            else badge.classList.add('hidden');
+
+            const favItems = menuItems.filter(i => favorites.includes(i.id));
+            if (favItems.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-400 py-10"><i class="fa-solid fa-heart text-4xl mb-2 opacity-30"></i><p>Aucun favori pour le moment</p></div>`;
+            } else {
+                container.innerHTML = favItems.map(item => `
+                    <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200 transition hover:shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <img src="${item.img}" loading="lazy" class="w-12 h-12 rounded-lg object-cover">
+                            <div><h4 class="text-xs font-bold text-slate-800">${item.name}</h4><p class="text-xs text-burgundy-800 font-black">${Number(item.price).toFixed(2)} €</p></div>
+                        </div>
+                        <button onclick="openCustomizationModal(${item.id}); closeFavoritesModal();" class="px-3 py-1.5 bg-burgundy-800 text-amber-300 rounded-lg text-xs font-bold transition hover:scale-105">Ajouter</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function openCustomizationModal(itemId) {
+            const item = menuMap.get(itemId);
+            if (!item || (!item.infinite && item.stock <= 0)) return;
+            currentCustomizingItem = item;
+            document.getElementById('custItemName').innerText = item.name;
+            document.getElementById('custItemBasePrice').innerText = Number(item.price).toFixed(2) + " €";
+            document.getElementById('custModalImg').src = item.img;
+            document.getElementById('customerItemNote').value = "";
+            updateFavoriteHeartIcon();
+
+            const tempSection = document.querySelector('input[name="temp"]').closest('.space-y-2');
+            if (item.hasTemp) tempSection.style.display = 'block';
+            else tempSection.style.display = 'none';
+
+            const sizeSection = document.querySelector('input[name="size"]').closest('.space-y-2');
+            if (item.hasSize) sizeSection.style.display = 'block';
+            else sizeSection.style.display = 'none';
+
+            const matchedDiet = dietaryFilters.find(d => d.id === item.diet);
+            const nestedSection = document.getElementById('nestedDietaryOptionsSection');
+            const nestedContainer = document.getElementById('nestedDietaryOptionsContainer');
+            const nestedLabel = document.getElementById('nestedDietaryLabel');
+
+            if (matchedDiet && matchedDiet.subOptions && matchedDiet.subOptions.length > 0) {
+                const activeSubOpts = matchedDiet.subOptions.filter(sub => sub.enabled !== false);
+                if (activeSubOpts.length > 0) {
+                    nestedLabel.innerText = `🥛 Choix (${matchedDiet.fr}) :`;
+                    nestedContainer.innerHTML = activeSubOpts.map((sub, idx) => `
+                        <label class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-xs font-bold transition">
+                            <div class="flex items-center gap-2">
+                                <input type="radio" name="nestedDiet" value="${sub.name}" data-price="${sub.price || 0}" ${idx === 0 ? 'checked' : ''} class="w-4 h-4 text-burgundy-800"> <span>${sub.name}</span>
+                            </div>
+                            ${sub.price > 0 ? `<span class="text-burgundy-800 font-black">+${Number(sub.price).toFixed(2)} €</span>` : ''}
+                        </label>
+                    `).join('');
+                    nestedSection.classList.remove('hidden');
+                } else {
+                    nestedSection.classList.add('hidden');
+                }
+            } else {
+                nestedSection.classList.add('hidden');
+            }
+
+            const parentCat = categories.find(c => c.id === item.cat);
+            const catAddons = parentCat && parentCat.allowedAddons ? parentCat.allowedAddons.filter(a => a.enabled !== false) : [];
+            const addonsContainer = document.getElementById('dynamicAddonsContainer');
+            if (catAddons.length > 0) {
+                addonsContainer.innerHTML = catAddons.map(addonObj => {
+                    return `
+                        <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" name="addon" value="${addonObj.name}" data-price="${addonObj.price || 0}" class="w-4 h-4 text-burgundy-800 rounded">
+                                <span class="text-xs font-bold text-slate-700">${addonObj.name}</span>
+                            </div>
+                            ${addonObj.price > 0 ? `<span class="text-xs font-black text-burgundy-800">+${Number(addonObj.price).toFixed(2)} €</span>` : ''}
+                        </label>
+                    `;
+                }).join('');
+                addonsContainer.closest('.space-y-3').style.display = 'block';
+            } else {
+                addonsContainer.innerHTML = '';
+                addonsContainer.closest('.space-y-3').style.display = 'none';
+            }
+
+            updateCustomizationTotal();
+            const modal = document.getElementById('customizationModal');
+            const content = document.getElementById('customizationModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCustomizationModal() {
+            const modal = document.getElementById('customizationModal');
+            const content = document.getElementById('customizationModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                currentCustomizingItem = null;
+                document.body.style.overflow = 'auto';
+            }, 300);
+        }
+
+        document.addEventListener('change', function(e) {
+            if (e.target && (e.target.name === 'addon' || e.target.name === 'size' || e.target.name === 'temp' || e.target.name === 'nestedDiet')) {
+                updateCustomizationTotal();
+            }
+        });
+
+        function updateCustomizationTotal() {
+            if (!currentCustomizingItem) return;
+            let total = currentCustomizingItem.price;
+            if (currentCustomizingItem.hasSize) {
+                const selectedSize = document.querySelector('input[name="size"]:checked');
+                if (selectedSize && selectedSize.dataset.price) total += parseFloat(selectedSize.dataset.price);
+            }
+            const selectedNestedDiet = document.querySelector('input[name="nestedDiet"]:checked');
+            if (selectedNestedDiet && selectedNestedDiet.dataset.price) {
+                total += parseFloat(selectedNestedDiet.dataset.price);
+            }
+            document.querySelectorAll('input[name="addon"]:checked').forEach(cb => {
+                total += parseFloat(cb.dataset.price || 0);
+            });
+            if (flashDiscountActive) {
+                total = total * 0.90; // خصم 10%
+            }
+            document.getElementById('custFinalPrice').innerText = total.toFixed(2) + " €";
+        }
+
+        function confirmAddToCartCustomized() {
+            if (!currentCustomizingItem) return;
+            let options = [];
+            if (currentCustomizingItem.hasTemp) {
+                const temp = document.querySelector('input[name="temp"]:checked');
+                if (temp) options.push(temp.value);
+            }
+            const nestedDiet = document.querySelector('input[name="nestedDiet"]:checked');
+            if (nestedDiet) options.push(nestedDiet.value);
+            
+            let size = null;
+            if (currentCustomizingItem.hasSize) {
+                size = document.querySelector('input[name="size"]:checked');
+                if (size) options.push(size.value);
+            }
+
+            let selectedAddons = [];
+            document.querySelectorAll('input[name="addon"]:checked').forEach(cb => {
+                selectedAddons.push(cb.value);
+            });
+
+            const userNote = document.getElementById('customerItemNote').value.trim();
+            const customTitle = `${currentCustomizingItem.name}${options.length > 0 ? ` [${options.join(', ')}]` : ''}${selectedAddons.length > 0 ? ` (${selectedAddons.join(', ')})` : ''}${userNote ? ` [Note: ${userNote}]` : ''}`;
+
+            const existingInCart = cart.find(i => i.id === currentCustomizingItem.id && i.name === customTitle);
+            const currentQtyInCart = existingInCart ? existingInCart.qty : 0;
+            
+            if (!currentCustomizingItem.infinite && (currentQtyInCart + 1) > currentCustomizingItem.stock) {
+                alert(`⚠️ عذراً، الكمية المتوفرة في المخزون هي ${currentCustomizingItem.stock} فقط لهذا المنتج.`);
+                return;
+            }
+
+            let extraCost = 0;
+            if (currentCustomizingItem.hasSize && size && size.dataset.price) {
+                extraCost += parseFloat(size.dataset.price);
+            }
+            if (nestedDiet && nestedDiet.dataset.price) {
+                extraCost += parseFloat(nestedDiet.dataset.price);
+            }
+            document.querySelectorAll('input[name="addon"]:checked').forEach(cb => {
+                extraCost += parseFloat(cb.dataset.price || 0);
+            });
+
+            let finalPrice = currentCustomizingItem.price + extraCost;
+            if (flashDiscountActive) {
+                finalPrice = finalPrice * 0.90;
+            }
+
+            const customItemData = { baseName: currentCustomizingItem.name, options, addons: selectedAddons, note: userNote };
+
+            if (existingInCart) {
+                existingInCart.qty++;
+            } else {
+                cart.push({ id: currentCustomizingItem.id, name: customTitle, itemData: customItemData, price: finalPrice, img: currentCustomizingItem.img, qty: 1 });
+            }
+
+            saveToStorage();
+            updateCartUI();
+            closeCustomizationModal();
+            closeCategoryModal();
+            openCartModal();
+        }
+
+        function addSpecialToCart(title, price, img, formuleId) {
+            if (formuleId) {
+                const f = formules.find(item => item.id === formuleId);
+                if (f && !f.infinite) {
+                    const existingCartItem = cart.find(i => i.name === title);
+                    const currentCartQty = existingCartItem ? existingCartItem.qty : 0;
+                    if (currentCartQty + 1 > f.stock) {
+                        alert(`⚠️ عذراً، الكمية المتوفرة في المخزون لهذا العرض هي ${f.stock} فقط.`);
+                        return;
+                    }
+                }
+            }
+
+            let finalPrice = price;
+            if (flashDiscountActive) finalPrice = finalPrice * 0.90;
+
+            const existing = cart.find(i => i.name === title);
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({ id: formuleId || Date.now(), name: title, isFormule: !!formuleId, itemData: { baseName: title, options: [], addons: [], note: '' }, price: finalPrice, img, qty: 1 });
+            }
+            saveToStorage();
+            updateCartUI();
+            openCartModal();
+        }
+
+        function updateCartUI() {
+            const badge = document.getElementById('cartBadge');
+            const container = document.getElementById('cartItemsContainer');
+            const totalEl = document.getElementById('cartTotal');
+            if (!container || !badge || !totalEl) return;
+            const totalQty = cart.reduce((acc, i) => acc + i.qty, 0);
+            let totalPrice = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+
+            if (totalQty > 0) { badge.innerText = totalQty; badge.classList.remove('hidden'); }
+            else badge.classList.add('hidden');
+
+            if (cart.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-400 py-10"><i class="fa-solid fa-basket-shopping text-4xl mb-2 opacity-30"></i><p>Votre panier est vide</p></div>`;
+            } else {
+                container.innerHTML = cart.map((item, index) => `
+                    <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 transition hover:shadow-sm">
+                        <img src="${item.img}" loading="lazy" class="w-12 h-12 rounded-lg object-cover">
+                        <div class="flex-grow"><h4 class="text-xs font-bold text-slate-800">${item.name}</h4><p class="text-xs text-burgundy-800 font-black">${Number(item.price).toFixed(2)} €</p></div>
+                        <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-slate-200">
+                            <button onclick="changeQty(${index}, -1)" class="text-xs text-slate-500 font-bold px-1 transition hover:scale-110">-</button>
+                            <span class="text-xs font-bold">${item.qty}</span>
+                            <button onclick="changeQty(${index}, 1)" class="text-xs text-slate-500 font-bold px-1 transition hover:scale-110">+</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            if (flashDiscountActive) {
+                totalEl.innerHTML = `<span class="line-through text-xs text-slate-400 mr-2">${(totalPrice / 0.90).toFixed(2)} €</span> <span class="text-emerald-700">${totalPrice.toFixed(2)} € (-10%)</span>`;
+            } else {
+                totalEl.innerText = totalPrice.toFixed(2) + " €";
+            }
+            updateClientsTabUI();
+        }
+
+        function changeQty(index, delta) {
+            const cartItem = cart[index];
+            if (cartItem.isFormule) {
+                const f = formules.find(item => item.id === cartItem.id);
+                if (delta > 0 && f && !f.infinite) {
+                    if (cartItem.qty + 1 > f.stock) {
+                        alert(`⚠️ عذراً، المخزون المتوفر لهذا العرض هو ${f.stock} فقط.`);
+                        return;
+                    }
+                }
+            } else {
+                const product = menuMap.get(cartItem.id);
+                if (delta > 0 && product && !product.infinite) {
+                    if (cartItem.qty + 1 > product.stock) {
+                        alert(`⚠️ عذراً، الكمية المتوفرة في المخزون هي ${product.stock} فقط.`);
+                        return;
+                    }
+                }
+            }
+            cart[index].qty += delta;
+            if (cart[index].qty <= 0) cart.splice(index, 1);
+            saveToStorage();
+            updateCartUI();
+        }
+
+        function openCartModal() {
+            const modal = document.getElementById('cartModal');
+            const content = document.getElementById('cartModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('translate-x-full'); }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCartModal() {
+            const modal = document.getElementById('cartModal');
+            const content = document.getElementById('cartModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.add('translate-x-full');
+            setTimeout(() => { modal.classList.add('hidden'); document.body.style.overflow = 'auto'; }, 300);
+        }
+
+        function submitOrderInternal(e) {
+            e.preventDefault();
+            if (isRushHour) { alert("⚠️ Désolé, le café est en heure de pointe."); return; }
+            if (cart.length === 0) return;
+
+            const clientName = document.getElementById('clientNameInput').value.trim();
+            if (!clientName) { alert("Veuillez entrer votre nom."); document.getElementById('clientNameInput').focus(); return; }
+
+            cart.forEach(cartItem => {
+                if (cartItem.isFormule) {
+                    const f = formules.find(item => item.id === cartItem.id);
+                    if (f && !f.infinite) f.stock = Math.max(0, f.stock - cartItem.qty);
+                } else {
+                    const product = menuMap.get(cartItem.id);
+                    if (product && !product.infinite) product.stock = Math.max(0, product.stock - cartItem.qty);
+                }
+            });
+
+            const totalPrice = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+            let lastOrderSeq = parseInt(localStorage.getItem('club_cafe_order_seq') || '0') + 1;
+            localStorage.setItem('club_cafe_order_seq', lastOrderSeq);
+            const newOrderId = String(lastOrderSeq).padStart(3, '0');
+
+            const newOrder = {
+                id: newOrderId,
+                client: clientName,
+                table: 'Comptoir',
+                timestamp: Date.now(),
+                date: new Date().toLocaleTimeString(),
+                items: [...cart],
+                total: totalPrice,
+                status: 'En attente de paiement'
+            };
+
+            ordersHistory.push(newOrder);
+            localStorage.setItem('club_cafe_my_last_order', JSON.stringify(newOrder));
+            localStorage.removeItem('club_cafe_dismissed_order');
+
+            saveToStorage();
+            playNewOrderSound();
+            document.getElementById('orderNotificationBadge').classList.remove('hidden');
+            cart = [];
+            flashDiscountActive = false;
+            saveToStorage();
+            updateCartUI();
+            closeCartModal();
+            document.getElementById('checkoutForm').reset();
+            showToast("✅ Commande envoyée !");
+            updateClientTrackerBanner();
+            renderFormulesGrid();
+        }
+
+        function dismissClientTracker() {
+            const rawLastOrder = localStorage.getItem('club_cafe_my_last_order');
+            if (rawLastOrder) {
+                try {
+                    const myOrder = JSON.parse(rawLastOrder);
+                    localStorage.setItem('club_cafe_dismissed_order', myOrder.id);
+                } catch(e) {}
+            }
+            document.getElementById('clientActiveOrderBanner').classList.add('hidden');
+        }
+
+        function updateClientTrackerBanner() {
+            const banner = document.getElementById('clientActiveOrderBanner');
+            try {
+                const rawOrders = localStorage.getItem('club_cafe_orders_v28');
+                const rawLastOrder = localStorage.getItem('club_cafe_my_last_order');
+                const dismissedId = localStorage.getItem('club_cafe_dismissed_order');
+                if (!rawLastOrder) { banner.classList.add('hidden'); return; }
+                const myOrder = JSON.parse(rawLastOrder);
+                if (dismissedId && dismissedId === myOrder.id) { banner.classList.add('hidden'); return; }
+                const allOrders = rawOrders ? JSON.parse(rawOrders) : [];
+                const latestOrderState = allOrders.find(o => o.id === myOrder.id);
+                if (!latestOrderState) { banner.classList.add('hidden'); return; }
+
+                const currentStatus = latestOrderState.status;
+                document.getElementById('bannerOrderId').innerText = "#" + myOrder.id;
+                document.getElementById('bannerClientName').innerText = myOrder.client;
+                document.getElementById('bannerOrderTotal').innerText = myOrder.total.toFixed(2) + " €";
+                
+                const badge = document.getElementById('bannerStatusBadge');
+                const statusText = document.getElementById('bannerStatusText');
+
+                if (currentStatus === 'En attente de paiement') {
+                    badge.innerText = "En attente 🟡";
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-amber-400 text-burgundy-900";
+                    statusText.innerText = "⏳ Veuillez vous présenter au comptoir pour régler votre commande.";
+                } else if (currentStatus === 'En préparation') {
+                    badge.innerText = "En préparation 🔄";
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-blue-500 text-white";
+                    statusText.innerText = "👨‍🍳 Votre commande est en cours de préparation dans notre cuisine.";
+                } else if (currentStatus === 'Prêt') {
+                    badge.innerText = "Prêt ! ☕";
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white animate-pulse";
+                    statusText.innerText = "🎉 Votre commande est prête ! Veuillez la récupérer au comptoir.";
+                }
+                banner.classList.remove('hidden');
+            } catch(e) { banner.classList.add('hidden'); }
+        }
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'club_cafe_orders_v28') {
+                try {
+                    ordersHistory = JSON.parse(e.newValue || '[]');
+                    updateClientTrackerBanner();
+                    if (isAdminLoggedIn) updateAdminDashboard();
+                } catch(err) {}
+            }
+        });
+
+        let lateAlertInterval = null;
+
+        function checkLateOrdersAndAlert() {
+            if (!isAdminLoggedIn) return;
+            const hasLateOrders = ordersHistory.some(o => {
+                if (o.status === 'Prêt') return false;
+                const orderTime = o.timestamp ? new Date(o.timestamp).getTime() : Date.now();
+                const totalMinutes = Math.max(0, Math.floor((Date.now() - orderTime) / 60000));
+                return totalMinutes >= 20;
+            });
+
+            if (hasLateOrders) {
+                if (!lateAlertInterval) {
+                    playNewOrderSound();
+                    lateAlertInterval = setInterval(() => {
+                        playNewOrderSound();
+                    }, 5000);
+                }
+            } else {
+                if (lateAlertInterval) {
+                    clearInterval(lateAlertInterval);
+                    lateAlertInterval = null;
+                }
+            }
+        }
+
+        setInterval(() => {
+            updateClientTrackerBanner();
+            checkFlashPromoStatus();
+            if(isAdminLoggedIn) {
+                updateAdminDashboard();
+                checkLateOrdersAndAlert();
+            }
+        }, 1000);
+
+        function openAdminModal() {
+            if (isAdminLoggedIn) {
+                document.getElementById('orderNotificationBadge').classList.add('hidden');
+                updateAdminDashboard();
+                const modal = document.getElementById('adminModal');
+                const content = document.getElementById('adminModalContent');
+                modal.classList.remove('hidden');
+                setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+                document.body.style.overflow = 'hidden';
+            } else {
+                const modal = document.getElementById('adminLoginModal');
+                const content = document.getElementById('adminLoginModalContent');
+                modal.classList.remove('hidden');
+                setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+                document.getElementById('adminPasswordInput').value = '';
+                document.getElementById('adminPasswordInput').focus();
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeAdminLoginModal() {
+            const modal = document.getElementById('adminLoginModal');
+            const content = document.getElementById('adminLoginModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); document.body.style.overflow = 'auto'; }, 300);
+        }
+
+        function verifyAdminPassword(e) {
+            e.preventDefault();
+            const pass = document.getElementById('adminPasswordInput').value;
+            if (pass === currentAdminPassword || pass === '123456') {
+                isAdminLoggedIn = true;
+                closeAdminLoginModal();
+                showToast("🔓 Connexion réussie !");
+                document.getElementById('masterSettingsBtn').classList.remove('hidden');
+                openAdminModal();
+            } else {
+                alert("Mot de passe incorrect !");
+                document.getElementById('adminPasswordInput').value = '';
+            }
+        }
+
+        function openAdminSettingsModal() {
+            const modal = document.getElementById('adminSettingsModal');
+            const content = document.getElementById('adminSettingsModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+            document.getElementById('masterKeyInput').value = '';
+            document.getElementById('newAdminPasswordInput').value = '';
+        }
+
+        function closeAdminSettingsModal() {
+            const modal = document.getElementById('adminSettingsModal');
+            const content = document.getElementById('adminSettingsModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function updateAdminPassword(e) {
+            e.preventDefault();
+            const masterKey = document.getElementById('masterKeyInput').value.trim();
+            const newPass = document.getElementById('newAdminPasswordInput').value.trim();
+            const SECRET_MASTER_KEY = "mohamed2026";
+            if (masterKey !== SECRET_MASTER_KEY) { alert("❌ Code secret master incorrect !"); return; }
+            if (newPass.length < 4) { alert("Le mot de passe doit contenir au moins 4 caractères."); return; }
+            currentAdminPassword = newPass;
+            saveToStorage();
+            closeAdminSettingsModal();
+            showToast("🔒 Mot de passe mis à jour avec succès !");
+        }
+
+        function logoutAdmin() {
+            isAdminLoggedIn = false;
+            closeAdminModal();
+            showToast("🔒 Déconnecté du dashboard");
+        }
+        
+        function closeAdminModal() {
+            const modal = document.getElementById('adminModal');
+            const content = document.getElementById('adminModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); document.body.style.overflow = 'auto'; }, 300);
+        }
+
+        let searchTimeout;
+        function debouncedAdminSearch(val) { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { updateAdminDashboard(); }, 300); }
+        function debouncedFilterMenu(val) { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { filterMenu(); }, 300); }
+
+        function filterMenu() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            if(!query) return;
+            for(let [id, item] of menuMap) {
+                if(item.name.toLowerCase().includes(query)) {
+                    openCategoryModal(item.cat);
+                    break;
+                }
+            }
+        }
+
+        function updateAdminDashboard() {
+            document.getElementById('statTotalProducts').innerText = `Produits : ${menuItems.length}`;
+            document.getElementById('statTotalCategories').innerText = `Catégories : ${categories.length}`;
+            document.getElementById('statTotalOrders').innerText = `Commandes : ${ordersHistory.length}`;
+            const totalRev = ordersHistory.reduce((acc, o) => acc + o.total, 0);
+            document.getElementById('statTotalRevenue').innerText = `Revenus : ${totalRev.toFixed(2)} €`;
+
+            const lowStockItems = menuItems.filter(i => !i.infinite && i.stock <= 2);
+            const lowStockFormules = formules.filter(f => !f.infinite && f.stock <= 2);
+            const lowStockBanner = document.getElementById('lowStockBanner');
+            if (lowStockItems.length > 0 || lowStockFormules.length > 0) {
+                lowStockBanner.classList.remove('hidden');
+                const names = [...lowStockItems.map(i => i.name), ...lowStockFormules.map(f => f.title)].join(', ');
+                document.getElementById('lowStockText').innerText = `⚠️ Alerte Stock : (${names}) bientôt épuisés !`;
+            } else {
+                lowStockBanner.classList.add('hidden');
+            }
+
+            const pendingOrdersCount = ordersHistory.filter(o => o.status === 'En attente de paiement').length;
+            const adminModalContent = document.getElementById('adminModalContent');
+            if (pendingOrdersCount > 0) {
+                if(adminModalContent) adminModalContent.classList.add('dashboard-alert-pulse');
+            } else {
+                if(adminModalContent) adminModalContent.classList.remove('dashboard-alert-pulse');
+            }
+
+            const formulesTableEl = document.getElementById('adminFormulesTable');
+            if (formulesTableEl) {
+                formulesTableEl.innerHTML = formules.map((f, idx) => `
+                    <tr class="border-b hover:bg-slate-50 transition">
+                        <td class="p-3 text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                <button onclick="moveFormuleOrder(${idx}, -1)" class="w-5 h-5 bg-slate-200 hover:bg-slate-300 rounded text-[10px] font-bold" title="تحريك لأعلى">⬆️</button>
+                                <button onclick="moveFormuleOrder(${idx}, 1)" class="w-5 h-5 bg-slate-200 hover:bg-slate-300 rounded text-[10px] font-bold" title="تحريك لأسفل">⬇️</button>
+                            </div>
+                        </td>
+                        <td class="p-3 flex items-center gap-2">
+                            <img src="${f.img}" loading="lazy" class="w-8 h-8 rounded object-cover flex-shrink-0">
+                            <input type="text" value="${f.title}" onchange="updateInlineFormule(${f.id}, 'title', this.value)" class="w-full px-2 py-1 text-xs border rounded bg-white font-bold transition focus:ring-1 focus:ring-burgundy-500">
+                        </td>
+                        <td class="p-3">
+                            <input type="number" step="0.01" value="${f.price}" onchange="updateInlineFormule(${f.id}, 'price', this.value)" class="w-20 px-2 py-1 text-xs border rounded bg-white font-black text-burgundy-800 transition focus:ring-1 focus:ring-burgundy-500">
+                        </td>
+                        <td class="p-3">
+                            ${f.infinite ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-800">♾️ Infini</span>` : `
+                                <input type="number" value="${f.stock}" onchange="updateInlineFormule(${f.id}, 'stock', this.value)" class="w-16 px-2 py-1 text-xs border rounded bg-white font-bold transition focus:ring-1 focus:ring-burgundy-500">
+                            `}
+                        </td>
+                        <td class="p-3 text-right flex items-center justify-end gap-1.5">
+                            <button onclick="editFormule(${f.id})" class="text-amber-600 hover:text-amber-800 font-bold px-2 py-1 bg-amber-50 rounded transition hover:scale-110" title="تعديل تفصيلي"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="duplicateFormule(${f.id})" class="text-purple-600 hover:text-purple-800 font-bold px-2 py-1 bg-purple-50 rounded transition hover:scale-110" title="نسخ سريع"><i class="fa-solid fa-copy"></i></button>
+                            <button onclick="deleteFormule(${f.id})" class="text-red-600 hover:text-red-800 font-bold px-2 py-1 bg-red-50 rounded transition hover:scale-110" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            const hierarchicalContainer = document.getElementById('hierarchicalCategoriesContainer');
+if (hierarchicalContainer) {
+    hierarchicalContainer.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    categories.forEach(cat => {
+        const catProducts = menuItems.filter(i => i.cat === cat.id);
+        const catAddons = cat.allowedAddons || [];
+        
+        const catDiv = document.createElement('div');
+        catDiv.className = "bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden";
+        
+        catDiv.innerHTML = `
+            <div class="p-4 bg-burgundy-900 text-cream-100 flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <img src="${cat.img}" class="w-10 h-10 rounded-lg object-cover border-2 border-amber-400">
+                    <div>
+                        <h3 class="font-black text-base text-amber-300">${cat.fr}</h3>
+                        <span class="text-[11px] text-cream-200">ID: ${cat.id} | Produits : ${catProducts.length}</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="editCategory('${cat.id}')" class="px-3 py-1.5 bg-amber-500 text-burgundy-900 font-bold text-xs rounded-lg shadow hover:bg-amber-400 transition" title="Modifier">
+                        <i class="fa-solid fa-pen-to-square"></i> Modifier
+                    </button>
+                    <button onclick="deleteCategory('${cat.id}')" class="px-3 py-1.5 bg-red-600 text-white font-bold text-xs rounded-lg shadow hover:bg-red-500 transition" title="Supprimer">
+                        <i class="fa-solid fa-trash"></i> Supprimer
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-3 bg-amber-50/70 border-b border-amber-200/60 flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-extrabold text-burgundy-900">✨ Suppléments & Prix :</span>
+                    ${catAddons.length === 0 ? `<span class="text-xs text-slate-400 italic">Aucun supplément</span>` : 
+                        catAddons.map((addonObj, aIdx) => `
+                            <span class="bg-white px-2.5 py-1 rounded-lg border text-[11px] font-bold ${addonObj.enabled ? 'text-slate-800 border-emerald-400' : 'text-slate-400 bg-slate-100 border-slate-300 line-through'} flex items-center gap-1.5 shadow-sm">
+                                ${addonObj.name} (${Number(addonObj.price || 0).toFixed(2)}€)
+                                <button onclick="toggleCategoryAddonStatus('${cat.id}', ${aIdx})" class="px-1.5 py-0.5 rounded text-[10px] font-extrabold ${addonObj.enabled ? 'bg-emerald-600 text-white' : 'bg-slate-400 text-white'}" title="تفعيل أو إيقاف">
+                                    ${addonObj.enabled ? 'ON' : 'OFF'}
+                                </button>
+                                <button onclick="removeAddonFromCategory('${cat.id}', ${aIdx})" class="text-red-600 hover:text-red-800 ml-1"><i class="fa-solid fa-xmark"></i></button>
+                            </span>
+                        `).join('')
+                    }
+                </div>
+                <button onclick="addAddonToCategory('${cat.id}')" class="px-3 py-1 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 rounded-lg text-xs font-bold shadow transition">
+                    <i class="fa-solid fa-plus"></i> Ajouter un supplément
+                </button>
+            </div>
+
+            <div class="p-4 bg-slate-50 products-list-container">
+                ${catProducts.length === 0 ? `
+                    <div class="text-center py-4 text-xs text-slate-400">Aucun produit dans cette catégorie pour le moment.</div>
+                ` : `
+                    <div class="space-y-2">
+                        ${catProducts.map(item => `
+                            <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between flex-wrap gap-2 shadow-sm">
+                                <div class="flex items-center gap-2 flex-grow">
+                                    <img src="${item.img}" class="w-8 h-8 rounded object-cover flex-shrink-0">
+                                    <input type="text" value="${item.name}" onchange="updateInlineProduct(${item.id}, 'name', this.value)" class="w-full sm:w-36 px-2 py-1 text-xs border rounded bg-white font-bold">
+                                </div>
+                                <div class="flex items-center gap-3 flex-wrap">
+                                    <div>
+                                        <span class="text-[10px] text-slate-400 block">Prix (€)</span>
+                                        <input type="number" step="0.01" value="${item.price}" onchange="updateInlineProduct(${item.id}, 'price', this.value)" class="w-16 px-2 py-1 text-xs border rounded font-black text-burgundy-800">
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] text-slate-400 block">Stock</span>
+                                        <input type="number" value="${item.stock}" onchange="updateInlineProduct(${item.id}, 'stock', this.value)" class="w-14 px-2 py-1 text-xs border rounded font-bold">
+                                    </div>
+                                    <div class="flex items-center gap-2 bg-slate-100 px-2 py-1 rounded-lg">
+                                        <label class="text-[10px] font-bold text-slate-700 flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" ${item.hasTemp ? 'checked' : ''} onchange="toggleItemOption(${item.id}, 'hasTemp', this.checked)"> 🌡️ Temp
+                                        </label>
+                                        <label class="text-[10px] font-bold text-slate-700 flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" ${item.hasSize ? 'checked' : ''} onchange="toggleItemOption(${item.id}, 'hasSize', this.checked)"> 📏 Taille
+                                        </label>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <button onclick="editHierarchicalProduct(${item.id})" class="text-amber-600 hover:text-amber-800 p-1.5 bg-amber-50 rounded" title="Modifier"><i class="fa-solid fa-pen-to-square"></i></button>
+                                        <button onclick="duplicateProduct(${item.id})" class="text-purple-600 hover:text-purple-800 p-1.5 bg-purple-50 rounded" title="Copier"><i class="fa-solid fa-copy"></i></button>
+                                        <button onclick="deleteHierarchicalProduct(${item.id})" class="text-red-600 hover:text-red-800 p-1.5 bg-red-50 rounded" title="Supprimer"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            </div>
+        `;
+        
+        fragment.appendChild(catDiv);
+    });
+
+    hierarchicalContainer.appendChild(fragment);
+}
+
+            const dietsListEl = document.getElementById('adminDietsList');
+            if (dietsListEl) {
+                dietsListEl.innerHTML = dietaryFilters.map(diet => `
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="font-extrabold text-burgundy-900 text-xs">${diet.fr}</span>
+                            <div class="flex items-center gap-1">
+                                <button onclick="editDietaryFilter('${diet.id}')" class="text-amber-600 hover:text-amber-800 p-1.5 bg-amber-50 rounded text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button onclick="deleteDietaryFilter('${diet.id}')" class="text-red-600 hover:text-red-800 p-1.5 bg-red-50 rounded text-xs"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 pt-1">
+                            <span class="text-[11px] font-bold text-slate-500 self-center">Options :</span>
+                            ${(!diet.subOptions || diet.subOptions.length === 0) ? `<span class="text-[11px] text-slate-400 italic">Aucune sous-option</span>` : 
+                                diet.subOptions.map((sub, sIdx) => `
+                                    <span class="bg-white px-2.5 py-1 rounded-lg border text-[11px] font-bold ${sub.enabled !== false ? 'text-slate-800 border-emerald-400' : 'text-slate-400 bg-slate-100 border-slate-300 line-through'} flex items-center gap-1.5 shadow-sm">
+                                        ${sub.name} (${Number(sub.price || 0).toFixed(2)}€)
+                                        <button onclick="toggleDietSubOptionStatus('${diet.id}', ${sIdx})" class="px-1.5 py-0.5 rounded text-[10px] font-extrabold ${sub.enabled !== false ? 'bg-emerald-600 text-white' : 'bg-slate-400 text-white'}" title="تفعيل أو إيقاف">
+                                            ${sub.enabled !== false ? 'ON' : 'OFF'}
+                                        </button>
+                                    </span>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const ordersCardsContainer = document.getElementById('adminOrdersCardsContainer');
+if (ordersCardsContainer) {
+    ordersCardsContainer.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    let filteredOrders = ordersHistory.slice().reverse();
+    if (currentOrderFilter !== 'all') {
+        filteredOrders = filteredOrders.filter(o => o.status === currentOrderFilter);
+    }
+
+    if (filteredOrders.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = "col-span-2 text-center text-slate-400 py-10 bg-white rounded-2xl border border-slate-200";
+        emptyDiv.innerText = "Aucune commande trouvée";
+        fragment.appendChild(emptyDiv);
+    } else {
+        filteredOrders.forEach(order => {
+            const orderTime = order.timestamp ? new Date(order.timestamp).getTime() : Date.now();
+            const totalMinutes = Math.max(0, Math.floor((Date.now() - orderTime) / 60000));
+            const elapsedHours = Math.floor(totalMinutes / 60);
+            const remainingMins = totalMinutes % 60;
+            const timeDisplay = elapsedHours > 0 ? `${elapsedHours}h ${remainingMins}m` : `${totalMinutes} min`;
+            
+            let cardBorderColor = "border-amber-300";
+            let cardHeaderBg = "bg-amber-50 text-amber-900 border-amber-200";
+            let statusBadgeHtml = `<span class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-100 text-amber-800">En attente 🟡</span>`;
+
+            if (order.status === 'En préparation') {
+                cardBorderColor = "border-blue-300";
+                cardHeaderBg = "bg-blue-50 text-blue-900 border-blue-200";
+                statusBadgeHtml = `<span class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-blue-100 text-blue-800">En préparation 🔄</span>`;
+            } else if (order.status === 'Prêt') {
+                cardBorderColor = "border-emerald-400";
+                cardHeaderBg = "bg-emerald-50 text-emerald-900 border-emerald-200";
+                statusBadgeHtml = `<span class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-100 text-emerald-800">Prêt ! ☕</span>`;
+            }
+
+            const isLate = order.status !== 'Prêt' && totalMinutes >= 20;
+            if (isLate) cardBorderColor = "border-red-500 animate-pulse";
+
+            const orderCard = document.createElement('div');
+            orderCard.className = `bg-white rounded-2xl shadow-sm border-2 ${cardBorderColor} overflow-hidden transition hover:shadow-md flex flex-col justify-between`;
+            
+            orderCard.innerHTML = `
+                <div class="p-3.5 border-b ${cardHeaderBg} flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="font-black text-sm">#${order.id}</span>
+                        <span class="text-[11px] opacity-75">(${order.date})</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        ${statusBadgeHtml}
+                        <span class="text-xs font-black px-2.5 py-1 rounded-lg bg-white shadow-sm">${order.total.toFixed(2)} €</span>
+                    </div>
+                </div>
+
+                <div class="p-4 space-y-3 flex-grow text-xs">
+                    <p class="font-bold text-slate-800">👤 Client : <span class="font-normal text-slate-600">${order.client || 'Client'}</span></p>
+                    <p class="font-bold text-slate-800">🛍️ Articles :</p>
+                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-700 font-medium">
+                        ${order.items.map(i => `<div class="py-0.5">• <b>${i.qty}x</b> ${i.name}</div>`).join('')}
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2 text-xs">
+                    <span class="font-bold ${isLate ? 'text-red-600 animate-bounce' : 'text-slate-600'}">⏱️ il y a ${timeDisplay} ${isLate ? '⚠️ (Retard)' : ''}</span>
+                    
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <button onclick="updateOrderStatus('${order.id}', 'En attente de paiement')" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] transition shadow-sm ${order.status === 'En attente de paiement' ? 'bg-amber-500 text-burgundy-900 ring-2 ring-amber-600' : 'bg-white text-slate-700 border hover:bg-slate-100'}">
+                            🟡 En attente
+                        </button>
+                        <button onclick="updateOrderStatus('${order.id}', 'En préparation')" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] transition shadow-sm ${order.status === 'En préparation' ? 'bg-blue-600 text-white ring-2 ring-blue-700' : 'bg-white text-slate-700 border hover:bg-slate-100'}">
+                            🔄 Préparation
+                        </button>
+                        <button onclick="updateOrderStatus('${order.id}', 'Prêt')" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] transition shadow-sm ${order.status === 'Prêt' ? 'bg-emerald-600 text-white ring-2 ring-emerald-700' : 'bg-white text-slate-700 border hover:bg-slate-100'}">
+                            ☕ Prêt
+                        </button>
+                        <button onclick="printOrderTicket('${order.id}')" class="px-3 py-1.5 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 rounded-lg font-bold shadow transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-print"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            fragment.appendChild(orderCard);
+        });
+    }
+    ordersCardsContainer.appendChild(fragment);
+}
+       
+
+        function toggleItemOption(prodId, optionKey, isChecked) {
+            const item = menuItems.find(i => i.id === prodId);
+            if (item) {
+                item[optionKey] = isChecked;
+                saveToStorage();
+                showToast("⚡ Option mise à jour !");
+            }
+        }
+
+        function saveDietaryFilterForm(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editDietId').value;
+            let idVal = document.getElementById('newDietId').value.trim().toLowerCase();
+            const id = idVal === "" ? "diet_" + Date.now() : idVal;
+            let frVal = document.getElementById('newDietFr').value.trim();
+            const fr = frVal === "" ? "🌱 Option" : frVal;
+            const subRaw = document.getElementById('newDietSubOptions').value;
+            const subNames = subRaw ? subRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+            const subOptions = subNames.map(name => ({ name, price: 0.50, enabled: true }));
+
+            if (editId) {
+                const index = dietaryFilters.findIndex(d => d.id === editId);
+                if (index !== -1) dietaryFilters[index] = { id, fr, subOptions };
+                showToast("Filtre mis à jour avec succès !");
+                resetDietForm();
+            } else {
+                dietaryFilters.push({ id, fr, subOptions });
+                showToast("Filtre ajouté avec succès !");
+                e.target.reset();
+            }
+            saveToStorage();
+            renderDietaryFiltersBar();
+            renderSubDietaryBar();
+            updateAdminDashboard();
+        }
+
+        function editDietaryFilter(dietId) {
+            const diet = dietaryFilters.find(d => d.id === dietId);
+            if (!diet) return;
+            document.getElementById('editDietId').value = diet.id;
+            document.getElementById('newDietId').value = diet.id;
+            document.getElementById('newDietId').disabled = true;
+            document.getElementById('newDietFr').value = diet.fr;
+            const names = diet.subOptions ? diet.subOptions.map(s => s.name).join(', ') : '';
+            document.getElementById('newDietSubOptions').value = names;
+            document.getElementById('dietFormTitle').innerText = "Modifier le filtre et ses options";
+            document.getElementById('cancelDietEditBtn').classList.remove('hidden');
+        }
+
+        function resetDietForm() {
+            document.getElementById('editDietId').value = "";
+            document.getElementById('newDietId').disabled = false;
+            document.getElementById('dietFormTitle').innerText = "Ajouter un filtre principal et ses sous-options";
+            document.getElementById('cancelDietEditBtn').classList.add('hidden');
+            const form = document.querySelector('#adminTabDiets form');
+            if (form) form.reset();
+        }
+
+        function deleteDietaryFilter(dietId) {
+            if (confirm("Êtes-vous sûr de vouloir supprimer ce filtre ?")) {
+                dietaryFilters = dietaryFilters.filter(d => d.id !== dietId);
+                if (currentDietaryFilter === dietId) { currentDietaryFilter = 'all'; currentSubDietaryFilter = 'all'; }
+                saveToStorage();
+                renderDietaryFiltersBar();
+                renderSubDietaryBar();
+                updateAdminDashboard();
+                showToast("Filtre supprimé");
+            }
+        }
+
+        function clearCompletedOrders() {
+            if (confirm("Effacer toutes les commandes prêtes ?")) {
+                ordersHistory = ordersHistory.filter(o => o.status !== 'Prêt');
+                saveToStorage();
+                updateAdminDashboard();
+                showToast("🗑️ Commandes prêtes effacées !");
+            }
+        }
+
+        function exportCSVReport() {
+            let csv = "ID,Client,Date,Total,Status\n";
+            ordersHistory.forEach(o => { csv += `${o.id},"${o.client || ''}",${o.date},${o.total},${o.status}\n`; });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `club_cafe_report_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            showToast("📊 Rapport Excel exporté !");
+        }
+
+        function printOrderTicket(orderId) {
+            const order = ordersHistory.find(o => o.id == orderId);
+            if (!order) return;
+            const area = document.getElementById('printReceiptArea');
+            let itemsHtml = order.items.map(i => {
+                let baseName = "";
+                let subLines = [];
+                if (i.itemData && i.itemData.baseName) {
+                    baseName = i.itemData.baseName;
+                    if (i.itemData.options) subLines.push(...i.itemData.options);
+                    if (i.itemData.addons) subLines.push(...i.itemData.addons);
+                    if (i.itemData.note) subLines.push(`Note: ${i.itemData.note}`);
+                } else {
+                    let fullName = i.name;
+                    let parts = fullName.split('[');
+                    baseName = parts[0].trim();
+                    for (let p = 1; p < parts.length; p++) {
+                        let cleanPart = parts[p].replace(']', '').trim();
+                        if (cleanPart) {
+                            if (cleanPart.includes('(')) {
+                                let subParts = cleanPart.split('(');
+                                subLines.push(subParts[0].trim());
+                                let inner = subParts[1].replace(')', '').trim();
+                                if (inner) subLines.push(...inner.split(',').map(s => s.trim()));
+                            } else {
+                                subLines.push(...cleanPart.split(',').map(s => s.trim()));
+                            }
+                        }
+                    }
+                }
+                return `
+                    <div style="margin-bottom: 12px; border-bottom: 1px dotted #ccc; padding-bottom: 6px;">
+                        <div style="font-size: 15px; font-weight: bold; text-transform: uppercase;"><b>${i.qty}x</b> ${baseName}</div>
+                        ${subLines.length > 0 ? `<div style="font-size: 10px; color: #333; padding-left: 14px; margin-top: 4px; line-height: 1.4;">${subLines.map(sub => `• ${sub}`).join('<br>')}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            area.innerHTML = `
+                <div style="font-family:monospace; padding:15px; max-width:300px; margin:0 auto; color:#000; font-size:12px;">
+                    <h2 style="text-align:center; margin:0; font-size:16px; font-weight: bold;">CLUB CAFÉ - KITCHEN</h2>
+                    <p style="text-align:center; font-size:12px; margin:4px 0;">Ticket #${order.id} | ${order.date}</p>
+                    <p style="text-align:center; font-weight:bold; font-size:14px; margin:4px 0;">👤 ${order.client || 'Client'}</p>
+                    <hr style="border:1px dashed #000; margin:8px 0;"/>
+                    <div style="margin: 10px 0;">${itemsHtml}</div>
+                    <hr style="border:1px dashed #000; margin:8px 0;"/>
+                    <h3 style="text-align:center; margin:6px 0; font-size:15px; font-weight: bold;">Total: ${order.total.toFixed(2)} €</h3>
+                    <p style="text-align:center; font-size:10px; margin-top:5px;">--- Bon Appétit ---</p>
+                </div>
+            `;
+            window.print();
+        }
+
+        function updateOrderStatus(id, newStatus) {
+            const ord = ordersHistory.find(o => o.id == id);
+            if (ord) { 
+                ord.status = newStatus; 
+                saveToStorage(); 
+                if (newStatus === 'En préparation') printOrderTicket(id);
+                showToast("Statut mis à jour"); 
+                updateClientTrackerBanner();
+                updateAdminDashboard();
+            }
+        }
+
+        function openClientAllergensModal() {
+            const matrixHead = document.getElementById('clientMatrixHead');
+            const matrixBody = document.getElementById('clientMatrixBody');
+            if (matrixHead && matrixBody) {
+                let headHtml = `<tr class="bg-cream-200 border-b-2 border-burgundy-800 font-black">
+                    <th class="p-2.5 border-r border-burgundy-800 text-left pl-4">Allergène</th>`;
+                matrixColumns.forEach(col => {
+                    headHtml += `<th class="p-2.5 border-r border-burgundy-800 w-12">${col}</th>`;
+                });
+                headHtml += `</tr>`;
+                matrixHead.innerHTML = headHtml;
+
+                let bodyHtml = '';
+                matrixRows.forEach((row, rIdx) => {
+                    bodyHtml += `<tr class="border-b border-burgundy-800/40 hover:bg-cream-100 transition">
+                        <td class="p-2.5 border-r border-burgundy-800/40 font-bold text-burgundy-900 text-left pl-4 flex items-center gap-2">
+                            <span class="text-xs text-amber-600 font-extrabold">${String.fromCharCode(65 + rIdx)}</span> ${row.name}
+                        </td>`;
+                    matrixColumns.forEach((col, cIdx) => {
+                        const hasDot = row.dots && row.dots[cIdx];
+                        bodyHtml += `<td class="p-2.5 border-r border-burgundy-800/40">${hasDot ? '<i class="fa-solid fa-circle text-burgundy-900 text-xs"></i>' : ''}</td>`;
+                    });
+                    bodyHtml += `</tr>`;
+                });
+                matrixBody.innerHTML = bodyHtml;
+            }
+
+            const modal = document.getElementById('clientAllergensModal');
+            const content = document.getElementById('clientAllergensModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeClientAllergensModal() {
+            const modal = document.getElementById('clientAllergensModal');
+            const content = document.getElementById('clientAllergensModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }, 300);
+        }
+
+        window.addEventListener('click', function(e) {
+            const categoryDetailModal = document.getElementById('categoryDetailModal');
+            const customizationModal = document.getElementById('customizationModal');
+            const cartModal = document.getElementById('cartModal');
+            const favoritesModal = document.getElementById('favoritesModal');
+            const adminModal = document.getElementById('adminModal');
+            const adminLoginModal = document.getElementById('adminLoginModal');
+            const adminSettingsModal = document.getElementById('adminSettingsModal');
+            const clientAllergensModal = document.getElementById('clientAllergensModal');
+
+            if (e.target === categoryDetailModal) closeCategoryModal();
+            if (e.target === customizationModal) closeCustomizationModal();
+            if (e.target === cartModal) closeCartModal();
+            if (e.target === favoritesModal) closeFavoritesModal();
+            if (e.target === adminModal) closeAdminModal();
+            if (e.target === adminLoginModal) closeAdminLoginModal();
+            if (e.target === adminSettingsModal) closeAdminSettingsModal();
+            if (e.target === clientAllergensModal) closeClientAllergensModal();
+        });
+
+        renderCategoriesGrid();
+        renderQuickCategoryPills();
+        renderDietaryFiltersBar();
+        renderSubDietaryBar();
+        renderFormulesGrid();
+        updateFavoritesUI();
+        updateCartUI();
+        updateClientTrackerBanner();
+        checkFlashPromoStatus();
+    </script>
+</body>
+</html>
