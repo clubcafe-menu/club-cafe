@@ -100,10 +100,10 @@
         <span id="lowStockText">⚠️ Alerte Stock : certains produits ou offres sont bientôt épuisés !</span>
     </div>
 
-    <!-- Rush Hour Banner Notice -->
+    <!-- Working Hours / Rush Hour Banner Notice -->
     <div id="rushBanner" class="bg-red-600 text-white text-center py-2 px-4 text-xs font-bold hidden flex items-center justify-center gap-2 sticky top-0 z-50">
         <i class="fa-solid fa-triangle-exclamation"></i>
-        <span id="rushBannerText">⚠️ Attention : Le café est en heure de pointe actuellement. Commandes en ligne suspendues temporairement.</span>
+        <span id="rushBannerText">⚠️ عذراً، الكافية مغلق حالياً. أوقات العمل من <span id="bannerOpenTime">08:00</span> إلى <span id="bannerCloseTime">22:00</span>. / Café fermé.</span>
     </div>
 
     <!-- Header Navigation -->
@@ -488,9 +488,6 @@
                     <h3 class="font-bold text-base sm:text-lg">Tableau de Bord Pro</h3>
                 </div>
                 <div class="flex items-center flex-wrap gap-2">
-                    <button onclick="toggleRushHour()" id="rushHourToggleBtn" class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-emerald-600 text-white shadow transition hover:scale-105">
-                        🟢 Café : Ouvert
-                    </button>
                     <button id="masterSettingsBtn" onclick="openAdminSettingsModal()" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-700 text-cream-100 shadow transition hidden items-center gap-1.5 hover:scale-105">
                         <i class="fa-solid fa-key"></i> Paramètres
                     </button>
@@ -525,7 +522,10 @@
 
             <!-- Detailed Tabs -->
             <div id="adminTabsContainer" class="bg-slate-100 px-4 sm:px-6 pt-3 border-b flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar flex-shrink-0 cursor-grab active:cursor-grabbing select-none">
-                <button onclick="switchAdminTab('formules')" id="tabBtnFormules" class="pb-3 px-3 sm:px-4 font-bold text-xs border-b-2 border-burgundy-800 text-burgundy-900 transition flex items-center gap-2 flex-shrink-0">
+                <button onclick="switchAdminTab('hours')" id="tabBtnHours" class="pb-3 px-3 sm:px-4 font-bold text-xs border-b-2 border-burgundy-800 text-burgundy-900 transition flex items-center gap-2 flex-shrink-0">
+                    <i class="fa-solid fa-clock"></i> <span>أوقات العمل (Horaires)</span>
+                </button>
+                <button onclick="switchAdminTab('formules')" id="tabBtnFormules" class="pb-3 px-3 sm:px-4 font-bold text-xs border-b-2 border-transparent text-slate-500 hover:text-burgundy-900 transition flex items-center gap-2 flex-shrink-0">
                     <i class="fa-solid fa-fire"></i> <span>Offres & Stock</span>
                 </button>
                 <button onclick="switchAdminTab('categories')" id="tabBtnCategories" class="pb-3 px-3 sm:px-4 font-bold text-xs border-b-2 border-transparent text-slate-500 hover:text-burgundy-900 transition flex items-center gap-2 flex-shrink-0">
@@ -547,8 +547,35 @@
 
             <div class="p-4 sm:p-6 overflow-y-auto space-y-6 flex-grow bg-slate-50 no-scrollbar">
                 
+                <!-- TAB 0: WORKING HOURS -->
+                <div id="adminTabHours" class="space-y-6">
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="border-b pb-2">
+                            <h4 class="font-bold text-burgundy-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-clock text-amber-500"></i> <span>تحديد وقت فتح وإغلاق استقبال الطلبات / Horaires de commande</span>
+                            </h4>
+                            <p class="text-xs text-slate-500 mt-1">يتم فتح استقبال الطلبات تلقائياً بين الوقتين المحددين، ويتم إغلاقه خارجهما.</p>
+                        </div>
+                        <form onsubmit="saveWorkingHours(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">🟢 وقت فتح الاستقبال (Heure d'ouverture) :</label>
+                                <input type="time" id="cafeOpenTimeInput" class="w-full px-3 py-2 text-xs border rounded-lg font-bold" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">🔴 وقت إغلاق الاستقبال (Heure de fermeture) :</label>
+                                <input type="time" id="cafeCloseTimeInput" class="w-full px-3 py-2 text-xs border rounded-lg font-bold" required>
+                            </div>
+                            <div class="sm:col-span-2 flex justify-end">
+                                <button type="submit" class="px-6 py-2.5 bg-burgundy-800 hover:bg-burgundy-700 text-amber-300 font-bold text-xs rounded-lg shadow transition hover:scale-105">
+                                    حفظ أوقات العمل
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- TAB 1: OFFRES -->
-                <div id="adminTabFormules" class="space-y-6">
+                <div id="adminTabFormules" class="space-y-6 hidden">
                     <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                         <div class="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
                             <h4 id="formuleFormTitle" class="font-bold text-burgundy-900 text-sm">
@@ -853,14 +880,16 @@
         let currentSubDietaryFilter = 'all';
         let adminStockFilter = 'all';
         let currentOrderFilter = 'all';
-        let isRushHour = false;
         let isAdminLoggedIn = false;
         let flashDiscountActive = false;
+
+        // Working Hours configuration
+        let cafeOpenTime = localStorage.getItem('club_cafe_open_time') || '08:00';
+        let cafeCloseTime = localStorage.getItem('club_cafe_close_time') || '22:00';
 
         let menuMap = new Map();
         let categoriesMap = new Map();
 
-        // تفعيل السحب بالماوس (Drag to Scroll) لجميع الأشرطة الأفقية
         document.addEventListener('DOMContentLoaded', () => {
             const scrollableContainers = document.querySelectorAll('.overflow-x-auto');
             scrollableContainers.forEach(container => {
@@ -889,11 +918,56 @@
                     if (!isDown) return;
                     e.preventDefault();
                     const x = e.pageX - container.offsetLeft;
-                    const walk = (x - startX) * 2; // سرعة السحب
+                    const walk = (x - startX) * 2;
                     container.scrollLeft = scrollLeft - walk;
                 });
             });
+
+            // Initialize time inputs in admin tab
+            const openInput = document.getElementById('cafeOpenTimeInput');
+            const closeInput = document.getElementById('cafeCloseTimeInput');
+            if (openInput) openInput.value = cafeOpenTime;
+            if (closeInput) closeInput.value = cafeCloseTime;
+
+            checkWorkingHours();
         });
+
+        function checkWorkingHours() {
+            const now = new Date();
+            const currentTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            
+            // Compare times (HH:MM format works with string comparison)
+            const isOpen = currentTimeStr >= cafeOpenTime && currentTimeStr <= cafeCloseTime;
+
+            const banner = document.getElementById('rushBanner');
+            const openSpan = document.getElementById('bannerOpenTime');
+            const closeSpan = document.getElementById('bannerCloseTime');
+            if (openSpan) openSpan.innerText = cafeOpenTime;
+            if (closeSpan) closeSpan.innerText = cafeCloseTime;
+
+            if (!isOpen) {
+                if (banner) banner.classList.remove('hidden');
+                document.getElementById('rushBannerText').innerHTML = `⚠️ عذراً، الكافيه مغلق حالياً خارج أوقات العمل. (من ${cafeOpenTime} إلى ${cafeCloseTime}). / Café fermé.`;
+                return false;
+            } else {
+                if (banner) banner.classList.add('hidden');
+                return true;
+            }
+        }
+
+        function saveWorkingHours(e) {
+            e.preventDefault();
+            const openVal = document.getElementById('cafeOpenTimeInput').value;
+            const closeVal = document.getElementById('cafeCloseTimeInput').value;
+            if (!openVal || !closeVal) return;
+
+            cafeOpenTime = openVal;
+            cafeCloseTime = closeVal;
+            localStorage.setItem('club_cafe_open_time', cafeOpenTime);
+            localStorage.setItem('club_cafe_close_time', cafeCloseTime);
+            showToast("⏰ تم حفظ أوقات العمل بنجاح!");
+            checkWorkingHours();
+        }
 
         function syncMaps() {
             menuMap.clear();
@@ -968,7 +1042,7 @@
         });
 
         function switchAdminTab(tabName) {
-            ['formules', 'categories', 'diets', 'allergens', 'clients', 'orders'].forEach(t => {
+            ['hours', 'formules', 'categories', 'diets', 'allergens', 'clients', 'orders'].forEach(t => {
                 const el = document.getElementById(`adminTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
                 const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
                 if(el) el.classList.add('hidden');
@@ -1051,21 +1125,6 @@
                 }
             });
             updateAdminDashboard();
-        }
-
-        function toggleRushHour() {
-            isRushHour = !isRushHour;
-            const btn = document.getElementById('rushHourToggleBtn');
-            const banner = document.getElementById('rushBanner');
-            if (isRushHour) {
-                btn.className = "px-3 py-1 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow transition animate-pulse";
-                btn.innerText = "🔴 Café : Rush Hour";
-                banner.classList.remove('hidden');
-            } else {
-                btn.className = "px-3 py-1 rounded-lg text-xs font-extrabold bg-emerald-600 text-white shadow transition";
-                btn.innerText = "🟢 Café : Ouvert";
-                banner.classList.add('hidden');
-            }
         }
 
         const defaultDietaryFilters = [
@@ -1204,7 +1263,7 @@
         syncMaps();
 
         function exportDatabaseJSON() {
-            const dbData = { categories, dietaryFilters, menuItems, formules, matrixColumns, matrixRows, ordersHistory };
+            const dbData = { categories, dietaryFilters, menuItems, formules, matrixColumns, matrixRows, ordersHistory, cafeOpenTime, cafeCloseTime };
             const blob = new Blob([JSON.stringify(dbData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1228,6 +1287,8 @@
                     if (imported.matrixColumns) matrixColumns = imported.matrixColumns;
                     if (imported.matrixRows) matrixRows = imported.matrixRows;
                     if (imported.ordersHistory) ordersHistory = imported.ordersHistory;
+                    if (imported.cafeOpenTime) { cafeOpenTime = imported.cafeOpenTime; localStorage.setItem('club_cafe_open_time', cafeOpenTime); }
+                    if (imported.cafeCloseTime) { cafeCloseTime = imported.cafeCloseTime; localStorage.setItem('club_cafe_close_time', cafeCloseTime); }
                     
                     saveToStorage();
                     renderCategoriesGrid();
@@ -2037,7 +2098,7 @@
                 total += parseFloat(cb.dataset.price || 0);
             });
             if (flashDiscountActive) {
-                total = total * 0.90; // خصم 10%
+                total = total * 0.90;
             }
             document.getElementById('custFinalPrice').innerText = total.toFixed(2) + " €";
         }
@@ -2209,7 +2270,7 @@
 
         function submitOrderInternal(e) {
             e.preventDefault();
-            if (isRushHour) { alert("⚠️ Désolé, le café est en heure de pointe."); return; }
+            if (!checkWorkingHours()) { alert("⚠️ عذراً، الكافيه مغلق حالياً ولا يمكن استقبال طلبات جديدة."); return; }
             if (cart.length === 0) return;
 
             const clientName = document.getElementById('clientNameInput').value.trim();
@@ -2347,6 +2408,7 @@
         setInterval(() => {
             updateClientTrackerBanner();
             checkFlashPromoStatus();
+            checkWorkingHours();
             if(isAdminLoggedIn) {
                 updateAdminDashboard();
                 checkLateOrdersAndAlert();
